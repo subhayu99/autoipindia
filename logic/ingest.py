@@ -5,15 +5,15 @@ from pytz import timezone
 from sqlalchemy import text
 
 from db import engine
-from config import CAPTCHA_MAX_RETRIES
 from helpers.utils import run_parallel_exec
 from logic.trademark_search import TrademarkSearchParams
+from config import CAPTCHA_MAX_RETRIES, TRADEMARKS_FAILED_FQN, TRADEMARKS_STATUS_FQN, TRADEMARKS_STATUS_TABLE_NAME, TRADEMARKS_FAILED_TABLE_NAME
 
 
 def create_tables_if_not_exists():
     with engine.connect() as conn:
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS trademark_status (
+        conn.execute(text(f"""
+            CREATE TABLE IF NOT EXISTS {TRADEMARKS_STATUS_TABLE_NAME} (
                 application_number VARCHAR, 
                 wordmark VARCHAR, 
                 class_name VARCHAR, 
@@ -21,8 +21,8 @@ def create_tables_if_not_exists():
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS failed_trademarks (
+        conn.execute(text(f"""
+            CREATE TABLE IF NOT EXISTS {TRADEMARKS_FAILED_TABLE_NAME} (
                 wordmark VARCHAR, 
                 class_name VARCHAR, 
                 application_number VARCHAR, 
@@ -82,7 +82,7 @@ def ingest_trademark_status(trademarks: list[TrademarkSearchParams], max_workers
         )
     except Exception as e:
         print(f"An error occurred while ingesting trademarks: {str(e)}")
-        return 0, len(trademarks)
+        return {"success": 0, "failed": len(trademarks)}
     
     successful: list[dict] = []
     failed_tms: list[dict] = []
@@ -114,7 +114,7 @@ def ingest_trademark_status(trademarks: list[TrademarkSearchParams], max_workers
                 print(f"Writing {len(failed_tms)} failed trademarks to database")
                 df_failed.to_sql("failed_trademarks", conn, index=False, if_exists="append")
 
-    return len(successful), len(failed_tms)
+    return {"success": len(successful), "failed": len(failed_tms)}
 
 
 def get_trademarks_to_ingest(stale_since_days: int = 15) -> list[TrademarkSearchParams]:
@@ -132,7 +132,7 @@ def get_trademarks_to_ingest(stale_since_days: int = 15) -> list[TrademarkSearch
     query = f"""
       WITH succeeded_deduped AS (
         -- Select the latest entry for each application_number from the trademark_status table
-        SELECT * FROM autoipindia.trademark_status
+        SELECT * FROM {TRADEMARKS_STATUS_FQN}
         QUALIFY ROW_NUMBER() OVER (PARTITION BY application_number ORDER BY timestamp DESC) = 1
       ),
       newly_ingested AS (
@@ -147,7 +147,7 @@ def get_trademarks_to_ingest(stale_since_days: int = 15) -> list[TrademarkSearch
           LAST_VALUE (wordmark IGNORE NULLS) OVER (PARTITION BY application_number ORDER BY timestamp) AS wordmark,
           CAST(LAST_VALUE (class_name IGNORE NULLS) OVER (PARTITION BY application_number ORDER BY timestamp) AS STRING) AS class_name,
           timestamp,
-        FROM autoipindia.failed_trademarks
+        FROM {TRADEMARKS_FAILED_FQN}
         QUALIFY ROW_NUMBER() OVER (PARTITION BY application_number ORDER BY timestamp DESC) = 1
       ),
       failed_coalesced AS (

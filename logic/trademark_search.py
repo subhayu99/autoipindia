@@ -1,14 +1,13 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, Field, model_validator
+
 from typing import Optional
 from logic import search_application as sa
 from logic import search_wordmark as sw
 
-
 SCRAPED_FIELDS = ['application_number', 'wordmark', 'class_name', 'status']
 
 
-@dataclass
-class TrademarkSearchParams:
+class TrademarkSearchParams(BaseModel):
     """
     Trademark data class for handling trademark searches
     
@@ -17,11 +16,12 @@ class TrademarkSearchParams:
         class_name: Trademark class
         application_number: Official application number
     """
-    wordmark: Optional[str] = None
-    class_name: Optional[int] = None
-    application_number: Optional[str] = None
+    wordmark: Optional[str] = Field(None, description="Trademark name/text. Required if application number is not provided")
+    class_name: Optional[int] = Field(None, description="Trademark class. Required if application number is not provided")
+    application_number: Optional[str] = Field(None, description="Official application number. Required if wordmark and class are not provided")
     
-    def __post_init__(self):
+    @model_validator(mode='after')
+    def validate_trademark(self):
         """Validate trademark data after initialization"""
         assert (self.wordmark and self.class_name) or self.application_number, "Either wordmark and class or application number must be provided"
 

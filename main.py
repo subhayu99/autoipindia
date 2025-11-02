@@ -1,0 +1,62 @@
+from fastapi import FastAPI, Query
+from logic import (
+    ingest_trademark_status,
+    get_trademarks_to_ingest,
+    TrademarkSearchParams,
+    TrademarkWithStatus,
+)
+
+app = FastAPI()
+
+
+@app.get("/ingest/all", response_model=dict)
+async def ingest(
+    stale_since_days: int = Query(
+        15, description="Number of days since which trademarks should not have been ingested",
+    ),
+):
+    params = get_trademarks_to_ingest(stale_since_days)
+    stats = ingest_trademark_status(
+        params, max_workers=1, headless=True, write_each_to_db=True
+    )
+    return stats
+
+
+@app.get("/ingest/tm", response_model=dict)
+async def ingest_trademark(
+    tm: TrademarkSearchParams,
+):
+    return ingest_trademark_status(
+        [tm], max_workers=1, headless=True, write_each_to_db=True
+    )
+
+
+@app.get("/ingest/tm/{application_number}", response_model=dict)
+async def ingest_by_application_number(application_number: str):
+    return ingest_trademark_status(
+        [TrademarkSearchParams(application_number=application_number)],
+        max_workers=1,
+        headless=True,
+        write_each_to_db=True,
+    )
+
+
+@app.get("/retrieve/all", response_model=list[TrademarkWithStatus])
+async def retrieve():
+    return TrademarkWithStatus.get_all(as_df=False)
+
+
+@app.get("/search/tm", response_model=TrademarkWithStatus)
+async def search_by_wordmark_and_class(wordmark: str, class_name: str):
+    return TrademarkWithStatus.get_by_wordmark_and_class(wordmark, class_name)
+
+
+@app.get("/search/tm/{application_number}", response_model=TrademarkWithStatus)
+async def search_by_application_number(application_number: str):
+    return TrademarkWithStatus.get_by_application_number(application_number)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

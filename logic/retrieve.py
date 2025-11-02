@@ -1,13 +1,13 @@
 from datetime import datetime
-from dataclasses import dataclass
 
 import pandas as pd
+from pydantic import BaseModel
 
 from db import engine
+from config import TRADEMARKS_STATUS_FQN
 
 
-@dataclass
-class TrademarkWithStatus:
+class TrademarkWithStatus(BaseModel):
     application_number: str
     wordmark: str
     class_name: str
@@ -35,8 +35,8 @@ class TrademarkWithStatus:
 
     @classmethod
     def get_all(cls, as_df=False):
-        query = """
-            SELECT * FROM autoipindia.trademark_status
+        query = f"""
+            SELECT * FROM {TRADEMARKS_STATUS_FQN}
             QUALIFY ROW_NUMBER() OVER (PARTITION BY application_number ORDER BY timestamp DESC) = 1
         """
         try:
@@ -48,3 +48,41 @@ class TrademarkWithStatus:
         
         print(f"Found {df.shape[0]} trademarks with status")
         return df if as_df else [cls.from_dict(x) for x in df.to_dict(orient="records")]
+
+    @classmethod
+    def get_by_application_number(cls, application_number: str):
+        query = f"""
+            SELECT * FROM {TRADEMARKS_STATUS_FQN}
+            WHERE CAST(application_number AS STRING) = '{application_number}'
+            QUALIFY ROW_NUMBER() OVER (PARTITION BY application_number ORDER BY timestamp DESC) = 1
+        """
+        try:
+            with engine.connect() as conn:
+                df = pd.read_sql(query, conn)
+        except Exception as e:
+            print(f"An error occurred while getting trademark for application number {application_number}: {str(e)}")
+            df = pd.DataFrame()
+        
+        if not df.empty:
+            return cls.from_dict(df.iloc[0].to_dict())
+        else:
+            return None
+
+    @classmethod
+    def get_by_wordmark_and_class(cls, wordmark: str, class_name: str):
+        query = f"""
+            SELECT * FROM {TRADEMARKS_STATUS_FQN}
+            WHERE CAST(wordmark AS STRING) = '{wordmark}' AND CAST(class_name AS STRING) = '{class_name}'
+            QUALIFY ROW_NUMBER() OVER (PARTITION BY application_number ORDER BY timestamp DESC) = 1
+        """
+        try:
+            with engine.connect() as conn:
+                df = pd.read_sql(query, conn)
+        except Exception as e:
+            print(f"An error occurred while getting trademark for wordmark {wordmark} and class {class_name}: {str(e)}")
+            df = pd.DataFrame()
+        
+        if not df.empty:
+            return cls.from_dict(df.iloc[0].to_dict())
+        else:
+            return None
