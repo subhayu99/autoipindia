@@ -10,9 +10,9 @@ import {
   type SortingState,
   type ColumnFiltersState,
 } from '@tanstack/react-table';
-import { RefreshCw, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
-import { format } from 'date-fns';
+import { RefreshCw, ChevronLeft, ChevronRight, ArrowUpDown, Clock } from 'lucide-react';
 import type { Trademark } from '../types';
+import { formatRelativeTime } from '../utils/time';
 
 interface TrademarkTableProps {
   data: Trademark[];
@@ -70,13 +70,14 @@ export const TrademarkTable: React.FC<TrademarkTableProps> = ({ data, onRefresh,
       }),
       columnHelper.accessor('timestamp', {
         header: 'Last Updated',
-        cell: (info) => {
-          try {
-            return format(new Date(info.getValue()), 'MMM dd, yyyy HH:mm');
-          } catch {
-            return info.getValue();
-          }
-        },
+        cell: (info) => (
+          <div className="flex items-center text-sm text-gray-600">
+            <Clock className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
+            <span title={new Date(info.getValue()).toLocaleString()}>
+              {formatRelativeTime(info.getValue())}
+            </span>
+          </div>
+        ),
       }),
       columnHelper.display({
         id: 'actions',

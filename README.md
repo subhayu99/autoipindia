@@ -16,12 +16,11 @@ autoipindia/
 │   ├── Dockerfile           # Backend container
 │   └── requirements.txt     # Python dependencies
 │
-├── frontend/             # Dash (Python) admin panel
 │   ├── app.py               # Dash application
 │   ├── Dockerfile           # Frontend container
 │   └── requirements.txt     # Python dependencies
 │
-└── react_fe/             # React (TypeScript) modern UI
+└── frontend/             # React (TypeScript) frontend
     ├── src/                 # React components
     ├── Dockerfile           # React container
     ├── package.json         # Node dependencies
@@ -147,7 +146,7 @@ docker build -t autoipindia-backend .
 docker run -d -p 8000:8000 --env-file .env autoipindia-backend
 
 # Terminal 2 - Start React Frontend
-cd react_fe
+cd frontend
 npm install
 cp .env.example .env
 # Edit with:
@@ -161,7 +160,7 @@ npm run dev
 - **React App:** http://localhost:3000
 - **API Docs:** http://localhost:8000/docs
 
-📚 **See [react_fe/README.md](react_fe/README.md) for detailed React deployment guides**
+📚 **See [frontend/README.md](frontend/README.md) for detailed React deployment guides**
 
 ---
 
@@ -286,7 +285,7 @@ services:
 
   react-frontend:
     build:
-      context: ./react_fe
+      context: ./frontend
       args:
         - VITE_API_BASE_URL=http://localhost:8000
         - VITE_API_TOKEN=${API_TOKEN}
@@ -323,7 +322,7 @@ python app.py
 ### React Frontend Development
 
 ```bash
-cd react_fe
+cd frontend
 npm install
 npm run dev
 ```
@@ -332,7 +331,7 @@ npm run dev
 
 - **Backend API:** http://localhost:8000/docs (Swagger UI)
 - **Dash Frontend:** [frontend/README.md](frontend/README.md)
-- **React Frontend:** [react_fe/README.md](react_fe/README.md)
+- **React Frontend:** [frontend/README.md](frontend/README.md)
 
 ## 🤝 Contributing
 

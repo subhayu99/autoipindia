@@ -1,332 +1,387 @@
-# AutoIPIndia Dashboard - Dash Frontend
+# AutoIPIndia React Frontend
 
-Professional admin panel for managing Indian trademark statuses, built with Plotly Dash.
+Modern, professional React + TypeScript frontend for managing Indian trademark statuses.
 
 ## ✨ Features
 
-- 🔐 **Secure Authentication** - Token-based API authentication
-- 📊 **Interactive Data Table** - Sort, filter, search with AG Grid
-- 🔄 **Click-to-Refresh** - Re-ingest any trademark with one click
-- ➕ **Add New Trademarks** - Easy form for ingesting new data
-- 📈 **Real-time Statistics** - Dashboard with trademark counts
-- 🎨 **Professional UI** - Bootstrap-themed responsive design
-- 🔍 **Advanced Search** - Filter by any field in real-time
+- 🎨 **Modern UI** - Built with React 18 + TypeScript + TailwindCSS
+- 📊 **Advanced Data Table** - TanStack Table with sorting, filtering, pagination
+- ⚡ **Fast & Responsive** - Vite for lightning-fast development and builds
+- 🔄 **Real-time Updates** - TanStack Query for data fetching and caching
+- 🎯 **Type-Safe** - Full TypeScript coverage for better DX
+- 🔐 **Secure** - Bearer token authentication
+- 🐳 **Production-Ready** - Multi-stage Docker build with Nginx
+- 📱 **Mobile Friendly** - Responsive design works on all devices
 
 ## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Backend API running (see `../backend`)
 
 ### Local Development
 
 ```bash
-# 1. Navigate to frontend directory
-cd frontend
+# 1. Install dependencies
+npm install
 
-# 2. Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure environment variables
+# 2. Configure environment
 cp .env.example .env
-# Edit .env with your API_BASE_URL and API_TOKEN
+# Edit .env:
+#   VITE_API_BASE_URL=http://localhost:8000
+#   VITE_API_TOKEN=your-token-from-backend
 
-# 5. Run the app
-python app.py
+# 3. Start development server
+npm run dev
 ```
 
-The dashboard will be available at http://localhost:8050
+Visit: **http://localhost:3000**
 
-### Docker Deployment
+### Build for Production
 
 ```bash
-# Build the image
-docker build -t autoipindia-frontend .
+# Build optimized production bundle
+npm run build
 
-# Run the container
-docker run -d \
-  --name autoipindia-frontend \
-  -p 8050:8050 \
-  -e API_BASE_URL=http://your-backend-url:8000 \
-  -e API_TOKEN=your-secret-token \
-  autoipindia-frontend
+# Preview production build locally
+npm run preview
+```
 
-# Or use environment file
-docker run -d \
-  --name autoipindia-frontend \
-  -p 8050:8050 \
-  --env-file .env \
-  autoipindia-frontend
+## 🐳 Docker Deployment
+
+### Build & Run
+
+```bash
+# Build with environment variables
+docker build \
+  --build-arg VITE_API_BASE_URL=https://your-backend-url.com \
+  --build-arg VITE_API_TOKEN=your-secret-token \
+  -t autoipindia-react .
+
+# Run container
+docker run -d -p 80:80 --name autoipindia-react autoipindia-react
+```
+
+Visit: **http://localhost**
+
+### Using docker-compose
+
+```yaml
+version: '3.8'
+services:
+  frontend:
+    build:
+      context: .
+      args:
+        VITE_API_BASE_URL: http://backend:8000
+        VITE_API_TOKEN: ${API_TOKEN}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
 ```
 
 ## 🌐 Deployment Options
 
-### 1. **Render** (Recommended for production)
+### 1. **Vercel** (Recommended - Best for React)
 
-**Why Render:**
-- ✅ Free tier available
-- ✅ Auto-deploys from Git
-- ✅ Easy environment variable management
-- ✅ HTTPS included
-- ✅ Good for Python apps
+**Why Vercel:**
+- ✅ Built by Next.js team, optimized for React
+- ✅ Free tier with great performance
+- ✅ Auto-deploy from Git
+- ✅ CDN + Edge network
+- ✅ Zero configuration
 
 **Steps:**
 
-1. Push code to GitHub
-2. Go to [Render Dashboard](https://dashboard.render.com/)
-3. Click "New +" → "Web Service"
-4. Connect your repository
-5. Configure:
-   - **Name**: `autoipindia-frontend`
-   - **Environment**: `Python 3`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `gunicorn app:server --bind 0.0.0.0:$PORT --workers 4`
-   - **Environment Variables**:
-     - `API_BASE_URL`: Your backend URL
-     - `API_TOKEN`: Your API token
-6. Click "Create Web Service"
+1. Install Vercel CLI:
+   ```bash
+   npm i -g vercel
+   ```
 
-**Cost**: Free tier available (spins down after inactivity)
+2. Deploy:
+   ```bash
+   vercel
+   ```
+
+3. Set environment variables in Vercel dashboard:
+   - `VITE_API_BASE_URL`: Your backend URL
+   - `VITE_API_TOKEN`: Your API token
+
+**Cost:** Free tier (no credit card required)
 
 ---
 
-### 2. **Railway** (Easy deployment)
+### 2. **Netlify** (Great for static sites)
 
-**Why Railway:**
-- ✅ Simple deployment
-- ✅ Free $5 credit monthly
-- ✅ Good documentation
+**Why Netlify:**
+- ✅ Easy deployment
+- ✅ Free tier
+- ✅ Built-in CI/CD
+- ✅ Instant cache invalidation
 
 **Steps:**
 
-```bash
-# Install Railway CLI
-npm install -g @railway/cli
+1. Create `netlify.toml`:
+   ```toml
+   [build]
+     command = "npm run build"
+     publish = "dist"
+   ```
 
-# Login and deploy
-railway login
-railway init
-railway up
+2. Deploy via CLI:
+   ```bash
+   npm install -g netlify-cli
+   netlify deploy --prod
+   ```
 
-# Set environment variables
-railway variables set API_BASE_URL=http://your-backend-url:8000
-railway variables set API_TOKEN=your-secret-token
-```
+3. Set environment variables in Netlify dashboard.
 
-**Cost**: $5 free credit/month, then usage-based
+**Cost:** Free tier available
 
 ---
 
 ### 3. **Google Cloud Run** (Scalable, same as backend)
 
 **Why Cloud Run:**
-- ✅ Scales to zero (no cost when idle)
+- ✅ Runs alongside backend
+- ✅ Auto-scales to zero
 - ✅ Pay per request
-- ✅ Great performance
-- ✅ Easy to manage alongside backend
+- ✅ HTTPS included
 
 **Steps:**
 
 ```bash
-# Build and push to Google Container Registry
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/autoipindia-frontend
+# Build and push
+docker build \
+  --build-arg VITE_API_BASE_URL=https://your-backend.run.app \
+  --build-arg VITE_API_TOKEN=your-token \
+  -t gcr.io/YOUR_PROJECT/autoipindia-react .
 
-# Deploy to Cloud Run
-gcloud run deploy autoipindia-frontend \
-  --image gcr.io/YOUR_PROJECT_ID/autoipindia-frontend \
+gcloud builds submit --tag gcr.io/YOUR_PROJECT/autoipindia-react
+
+# Deploy
+gcloud run deploy autoipindia-react \
+  --image gcr.io/YOUR_PROJECT/autoipindia-react \
   --platform managed \
   --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars API_BASE_URL=https://your-backend-url.run.app,API_TOKEN=your-token
+  --allow-unauthenticated
 ```
 
-**Cost**: Free tier includes 2 million requests/month
+**Cost:** Free tier includes 2M requests/month
 
 ---
 
-### 4. **Heroku** (Traditional PaaS)
+### 4. **AWS S3 + CloudFront** (Static hosting)
 
-**Why Heroku:**
-- ✅ Well-documented
-- ✅ Easy deployment
-- ✅ Add-ons ecosystem
+**Why S3:**
+- ✅ Very cheap
+- ✅ Highly available
+- ✅ CloudFront CDN
+- ✅ Good for production
 
 **Steps:**
 
-1. Create `Procfile` in frontend directory:
-   ```
-   web: gunicorn app:server --bind 0.0.0.0:$PORT --workers 4
-   ```
-
-2. Deploy:
+1. Build:
    ```bash
-   heroku create autoipindia-frontend
-   heroku config:set API_BASE_URL=http://your-backend-url
-   heroku config:set API_TOKEN=your-secret-token
-   git subtree push --prefix frontend heroku main
+   npm run build
    ```
 
-**Cost**: Free tier discontinued, starts at $7/month
+2. Upload to S3:
+   ```bash
+   aws s3 sync dist/ s3://your-bucket --delete
+   ```
+
+3. Configure CloudFront distribution pointing to S3 bucket.
+
+**Cost:** ~$1-5/month depending on traffic
 
 ---
 
-### 5. **Netlify** (With workaround)
+### 5. **Docker + Any Cloud Provider**
 
-**Note:** Netlify is primarily for static sites, but you can use it with serverless functions.
-
-For pure Python Dash app, better to use Render, Railway, or Cloud Run.
-
----
-
-### 6. **PythonAnywhere** (Budget option)
-
-**Why PythonAnywhere:**
-- ✅ Very cheap ($5/month)
-- ✅ Simple Python hosting
-- ✅ Good for small projects
-
-**Steps:**
-
-1. Sign up at [PythonAnywhere](https://www.pythonanywhere.com)
-2. Upload your code
-3. Create web app with manual configuration
-4. Set WSGI file to use Gunicorn
-5. Configure environment variables in web app settings
-
-**Cost**: Free tier available, $5/month for custom domains
+Works on:
+- **Railway** - `railway up`
+- **Render** - Connect Git repo
+- **DigitalOcean** - App Platform
+- **Azure** - Container Instances
+- **Heroku** - Container registry
 
 ---
+
+## 📁 Project Structure
+
+```
+react_fe/
+├── src/
+│   ├── components/        # React components
+│   │   ├── Dashboard.tsx      # Main dashboard layout
+│   │   ├── StatsCards.tsx     # Statistics cards
+│   │   ├── AddTrademarkForm.tsx  # Form for adding trademarks
+│   │   └── TrademarkTable.tsx # Data table with sorting/filtering
+│   ├── hooks/            # Custom React hooks
+│   │   └── useTrademarks.ts   # Data fetching hook
+│   ├── services/         # API clients
+│   │   └── api.ts            # Axios-based API client
+│   ├── types/            # TypeScript types
+│   │   └── index.ts          # Type definitions
+│   ├── App.tsx          # Root component
+│   ├── main.tsx         # Entry point
+│   └── index.css        # Global styles (Tailwind)
+├── public/              # Static assets
+├── Dockerfile           # Multi-stage production build
+├── nginx.conf           # Nginx configuration
+├── package.json         # Dependencies
+├── tsconfig.json        # TypeScript config
+├── vite.config.ts       # Vite config
+└── tailwind.config.js   # Tailwind config
+```
+
+## 🎨 Tech Stack
+
+| Technology | Purpose | Version |
+|------------|---------|---------|
+| **React** | UI framework | 18.2+ |
+| **TypeScript** | Type safety | 5.2+ |
+| **Vite** | Build tool | 5.0+ |
+| **TailwindCSS** | Styling | 3.4+ |
+| **TanStack Table** | Data grid | 8.11+ |
+| **TanStack Query** | Data fetching | 5.14+ |
+| **Axios** | HTTP client | 1.6+ |
+| **Lucide React** | Icons | Latest |
+| **date-fns** | Date formatting | 3.0+ |
 
 ## 🔧 Environment Variables
 
 | Variable | Required | Description | Example |
 |----------|----------|-------------|---------|
-| `API_BASE_URL` | Yes | Backend API URL | `http://localhost:8000` or `https://api.example.com` |
-| `API_TOKEN` | Yes | API authentication token (must match backend) | `your-secret-token-123` |
-| `PORT` | No | Port for frontend server (default: 8050) | `8050` |
-| `DEBUG` | No | Enable debug mode (default: False) | `True` or `False` |
+| `VITE_API_BASE_URL` | Yes | Backend API URL | `http://localhost:8000` or `https://api.example.com` |
+| `VITE_API_TOKEN` | Yes | API authentication token (must match backend) | `your-secret-token-123` |
 
-## 📱 How to Use the Dashboard
+**Note:** All Vite env vars must be prefixed with `VITE_` to be exposed to the browser.
 
-### 1. **View All Trademarks**
-   - The main table shows all trademarks in your database
-   - Use the search bar to filter by any field
-   - Click column headers to sort
+## 💻 Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server (port 3000)
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+
+### Code Style
+
+- TypeScript strict mode enabled
+- ESLint for linting
+- Functional components with hooks
+- TailwindCSS for styling (no CSS modules)
+
+## 🎯 Features Walkthrough
+
+### 1. **Dashboard Overview**
+   - Real-time statistics cards (total, registered, pending, other)
+   - Color-coded status indicators
+   - Refresh all button
 
 ### 2. **Add New Trademark**
-   - Enter **either**:
-     - Application Number, **OR**
-     - Wordmark + Class
-   - Click "Ingest" to fetch from IP India website
-   - System will solve CAPTCHA automatically
+   - Enter Application Number OR (Wordmark + Class)
+   - One-click ingestion
+   - Success/error feedback
+   - Automatic table refresh
 
-### 3. **Refresh Existing Trademark**
-   - Click on any row in the table to select it
-   - Click "Re-ingest" button to update that trademark
-   - Useful for checking status changes
+### 3. **Interactive Table**
+   - **Sort**: Click column headers
+   - **Search**: Global search across all fields
+   - **Filter**: Real-time filtering
+   - **Paginate**: 20 items per page
+   - **Select**: Click row to highlight
+   - **Re-ingest**: Button per row to refresh that trademark
 
-### 4. **Statistics**
-   - Dashboard shows real-time counts:
-     - Total trademarks tracked
-     - Registered trademarks
-     - Pending/examination
-     - Other statuses
+### 4. **Status Colors**
+   - 🟢 Green: Registered
+   - 🟡 Yellow: Pending/Examination
+   - ⚪ Gray: Other statuses
 
-### 5. **Refresh All**
-   - Click "Refresh All" button to reload data from backend
-   - Auto-updates statistics
+## 🔒 Security
 
-## 🏗️ Architecture
-
-```
-┌─────────────────┐         HTTP + Bearer Token        ┌──────────────────┐
-│                 │ ───────────────────────────────────▶│                  │
-│  Dash Frontend  │                                     │  FastAPI Backend │
-│  (Port 8050)    │ ◀───────────────────────────────────│  (Port 8000)     │
-│                 │         JSON Responses               │                  │
-└─────────────────┘                                     └──────────────────┘
-      │                                                          │
-      │                                                          │
-      ▼                                                          ▼
-  User Browser                                          Playwright + DuckDB
-```
-
-**Communication Flow:**
-1. User interacts with Dash UI
-2. Dash app makes authenticated API calls to FastAPI backend
-3. Backend performs web scraping and database operations
-4. Results returned to frontend
-5. UI updates reactively
-
-## 🎨 Customization
-
-### Themes
-
-The app uses Bootstrap theme. To change:
-
-```python
-# In app.py, change the external_stylesheets
-external_stylesheets=[dbc.themes.DARKLY]  # Dark theme
-# Options: BOOTSTRAP, CERULEAN, COSMO, CYBORG, DARKLY, FLATLY, JOURNAL,
-#          LITERA, LUMEN, LUX, MATERIA, MINTY, MORPH, PULSE, QUARTZ,
-#          SANDSTONE, SIMPLEX, SKETCHY, SLATE, SOLAR, SPACELAB, SUPERHERO,
-#          UNITED, VAPOR, YETI, ZEPHYR
-```
-
-### Table Configuration
-
-Modify `columnDefs` in `update_table()` function to customize columns, widths, filters, etc.
-
-### Auto-refresh
-
-Uncomment and configure the interval component to enable auto-refresh:
-
-```python
-dcc.Interval(id="auto-refresh-interval", interval=60000, n_intervals=0, disabled=False)
-```
-
-## 🔒 Security Notes
-
-- ⚠️ **Never commit `.env` file** with real credentials
-- 🔑 Always use HTTPS in production (enabled by default on Render, Railway, Cloud Run)
-- 🔐 Keep `API_TOKEN` secret and rotate regularly
-- 🚫 Don't expose admin dashboards publicly without authentication
+- Environment variables for config (never commit .env)
+- Bearer token authentication
+- Nginx security headers in production
+- No sensitive data in client-side code
+- HTTPS recommended for production
 
 ## 🐛 Troubleshooting
 
-### "Connection Error" or "Unable to fetch data"
-- ✅ Check `API_BASE_URL` is correct
-- ✅ Verify backend is running and accessible
-- ✅ Ensure `API_TOKEN` matches between frontend and backend
-- ✅ Check firewall/network settings
+### "Network Error" or CORS issues
+- ✅ Check `VITE_API_BASE_URL` is correct
+- ✅ Ensure backend is running and accessible
+- ✅ Verify backend has CORS enabled for your frontend domain
+- ✅ Check `VITE_API_TOKEN` matches backend
 
-### "401 Unauthorized"
-- ✅ Verify `API_TOKEN` environment variable is set correctly
-- ✅ Check token matches backend configuration
+### Build fails
+- ✅ Run `npm install` to ensure all dependencies are installed
+- ✅ Check Node.js version (18+)
+- ✅ Clear cache: `rm -rf node_modules package-lock.json && npm install`
 
 ### Table not loading
-- ✅ Click "Refresh All" button
-- ✅ Check browser console for errors (F12)
-- ✅ Verify backend `/retrieve/all` endpoint is working
+- ✅ Open browser console (F12) and check for errors
+- ✅ Verify API token is correct
+- ✅ Check backend `/retrieve/all` endpoint is working
 
-### Slow performance
-- ✅ Reduce `paginationPageSize` in table config
-- ✅ Increase timeout in API calls
-- ✅ Deploy backend and frontend in same region
+### Styles not applying
+- ✅ Ensure TailwindCSS is properly configured
+- ✅ Check `index.css` imports Tailwind directives
+- ✅ Clear browser cache
 
-## 📚 Dependencies
+## 🆚 Comparison: React vs Dash
 
-- **Dash** - Web framework for building analytical web applications
-- **Dash Bootstrap Components** - Bootstrap themes and components
-- **Dash AG Grid** - Professional data grid component
-- **Pandas** - Data manipulation and analysis
-- **Requests** - HTTP library for API calls
-- **Gunicorn** - Production WSGI server
+| Feature | React Frontend | Dash Frontend |
+|---------|---------------|---------------|
+| **Language** | TypeScript/JavaScript | Python |
+| **Performance** | Faster (client-side) | Good |
+| **Customization** | Unlimited | Good |
+| **Learning Curve** | Steeper | Easier (if you know Python) |
+| **Ecosystem** | Massive | Smaller |
+| **Deployment** | More options | Python hosting needed |
+| **Mobile Experience** | Excellent | Good |
+| **Best For** | Public-facing, custom UIs | Internal tools, data apps |
+
+**When to use React:**
+- You need pixel-perfect custom design
+- Public-facing application
+- Team has JS/TS experience
+- Need maximum performance
+
+**When to use Dash:**
+- Python-only team
+- Internal admin tool
+- Rapid prototyping
+- Data science focus
 
 ## 🤝 Contributing
 
-Feel free to submit issues or pull requests!
+Contributions welcome! Please follow the existing code style and add tests where applicable.
 
 ## 📄 License
 
 See main project LICENSE file.
+
+---
+
+## 🎉 What's Included
+
+✅ Modern React 18 with TypeScript
+✅ Vite for fast development
+✅ TailwindCSS for styling
+✅ TanStack Table for advanced data grid
+✅ TanStack Query for data fetching
+✅ Responsive design
+✅ Dark mode ready (easy to add)
+✅ Production-optimized Docker build
+✅ Nginx with caching & compression
+✅ Full TypeScript coverage
+✅ ESLint configuration
+✅ Multiple deployment guides
+
+**Ready to deploy!** 🚀
