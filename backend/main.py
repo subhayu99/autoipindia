@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException, Security, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from logic import (
     ingest_trademark_status,
@@ -9,6 +10,22 @@ from logic import (
 from config import API_TOKEN
 
 app = FastAPI()
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",      # React dev server
+        "http://localhost:8050",      # Dash frontend
+        "http://127.0.0.1:3000",      # Alternative localhost
+        "http://127.0.0.1:8050",      # Alternative localhost
+        # Add your production frontend URLs here when deploying
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],              # Allow all methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],              # Allow all headers including Authorization
+)
+
 security = HTTPBearer()
 
 
