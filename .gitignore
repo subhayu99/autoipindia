@@ -78,10 +78,10 @@ Thumbs.db
 
 # Project specific
 captcha/
-*.png
-*.jpg
-*.jpeg
-sample_captchas/
+# *.png
+# *.jpg
+# *.jpeg
+# sample_captchas/
 logs/
 temp/
 .streamlit/
