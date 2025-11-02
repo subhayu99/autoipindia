@@ -10,6 +10,8 @@ from helpers.captcha_solver import read_captcha
 def search_trademark(application_number: str | int, headless: bool = False):
     application_number = str(application_number)
     with sync_playwright() as p:
+        print(f"Initiating search for application number: {application_number}")
+        
         # Launch browser (set headless=False to see the browser)
         browser = p.chromium.launch(headless=headless)
         page = browser.new_page()
@@ -41,6 +43,7 @@ def search_trademark(application_number: str | int, headless: bool = False):
         tm_name = re.findall("TM Applied For\s+(.+)", text)[0].strip()
         tm_class = re.findall("Class\s+(.+)", text)[0].strip()
 
+        print(f"Search result for application number: {application_number}")
         print(f"Trademark Name: {tm_name}")
         print(f"Trademark Class: {tm_class}")
         print(f"Trademark Date: {tm_date}")

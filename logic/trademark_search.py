@@ -39,28 +39,36 @@ class TrademarkSearchParams:
             DataFrame with trademark information (fields: `SCRAPED_FIELDS`) or None if failed
         """
         df = None
+        print(f"Searching for trademark with params: {self.to_dict()}")
         
         try:
             # Try wordmark search first if both wordmark and class are available
             if self.wordmark and self.class_name:
+                print("Attempting wordmark search")
                 df = sw.search_trademark(
                     self.wordmark, 
                     self.class_name, 
                     max_captcha_retries=max_retries,
                     headless=headless
                 )
+                print(f"Wordmark search result: {df if df is not None else 'None'}")
                 
                 # If application number is provided, filter results
                 if self.application_number and df is not None and not df.empty:
+                    print(f"Filtering results by application number: {self.application_number}")
                     _df = df[df['application_number'] == str(self.application_number)]
+                    print(f"Filtered result: {_df if _df is not None else 'None'}")
                     
                     # If filtered results are not empty, use them
                     if not _df.empty:
                         df = _df
+                        print("Using filtered result")
             
             # Fall back to application number search if wordmark search failed or not possible
             if self.application_number and (df is None or df.empty):
+                print("Attempting application number search")
                 df = sa.search_trademark(self.application_number, headless=headless)
+                print(f"Application number search result: {df if df is not None else 'None'}")
 
         except Exception as e:
             print(f"Error during trademark search: {str(e)}")
