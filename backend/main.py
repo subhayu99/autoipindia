@@ -218,6 +218,22 @@ async def search_by_application_number(
     return TrademarkWithStatus.get_by_application_number(application_number)
 
 
+@app.delete("/delete/tm/{application_number}", response_model=dict)
+async def delete_by_application_number(
+    application_number: str,
+    token: str = Depends(verify_token),
+):
+    return TrademarkWithStatus.delete_by_application_number(application_number)
+
+
+@app.get("/history/tm/{application_number}", response_model=list[TrademarkWithStatus])
+async def get_history_by_application_number(
+    application_number: str,
+    token: str = Depends(verify_token),
+):
+    return TrademarkWithStatus.get_history_by_application_number(application_number)
+
+
 if __name__ == "__main__":
     import uvicorn
 

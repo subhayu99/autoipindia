@@ -34,6 +34,15 @@ def create_tables_if_not_exists():
 create_tables_if_not_exists()
 
 
+def _write_failed_to_db(trademark: TrademarkSearchParams):
+    print(f"Writing failed trademark search to database: {trademark.to_dict()}")
+    failed_df = pd.DataFrame([trademark.to_dict()])
+    failed_df["timestamp"] = datetime.now(tz=timezone("Asia/Kolkata"))
+    with engine.connect() as conn:
+        failed_df.to_sql("failed_trademarks", conn, index=False, if_exists="append")
+    print("Wrote failed trademark search to database successfully")
+
+
 def get_trademark_status(trademark: TrademarkSearchParams, headless: bool = True, write_to_db: bool = True) -> dict | None:
     """
     Get trademark status from database or online search
@@ -46,6 +55,10 @@ def get_trademark_status(trademark: TrademarkSearchParams, headless: bool = True
                 print(f"Returning trademark status: {df.iloc[0].to_dict()}")
                 return df.iloc[0].to_dict()
     
+            if isinstance(df, str):
+                _write_failed_to_db(trademark)
+                return None
+            
             print(f"Writing trademark status to database: {df}")
             df["timestamp"] = datetime.now(tz=timezone("Asia/Kolkata"))
             with engine.connect() as conn:
@@ -57,12 +70,7 @@ def get_trademark_status(trademark: TrademarkSearchParams, headless: bool = True
         print(f"An error occurred while searching for trademark status: {str(e)}")
         
         if write_to_db:
-            print(f"Writing failed trademark search to database: {trademark.to_dict()}")
-            failed_df = pd.DataFrame([trademark.to_dict()])
-            failed_df["timestamp"] = datetime.now(tz=timezone("Asia/Kolkata"))
-            with engine.connect() as conn:
-                failed_df.to_sql("failed_trademarks", conn, index=False, if_exists="append")
-            print("Wrote failed trademark search to database successfully")
+            _write_failed_to_db(trademark)
         
         return None
 

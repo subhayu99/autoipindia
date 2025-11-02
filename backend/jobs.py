@@ -8,6 +8,9 @@ from enum import Enum
 from dataclasses import dataclass, asdict
 from threading import Lock
 
+from config import MAX_CONCURRENT_JOBS
+
+
 class JobStatus(str, Enum):
     PENDING = "pending"
     RUNNING = "running"
@@ -45,8 +48,8 @@ class JobManager:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
-                    cls._instance.jobs: Dict[str, Job] = {}
-                    cls._instance.max_concurrent_jobs = 5
+                    cls._instance.jobs: Dict[str, Job] = {} # type: ignore
+                    cls._instance.max_concurrent_jobs = MAX_CONCURRENT_JOBS
         return cls._instance
 
     def create_job(self, job_type: str, params: Optional[Dict[str, Any]] = None) -> Job:
