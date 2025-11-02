@@ -8,6 +8,7 @@ load_dotenv()
 # API Keys
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 MOTHERDUCK_TOKEN = os.getenv("MOTHERDUCK_TOKEN")
+API_TOKEN = os.getenv("API_TOKEN")  # Static token for API authentication
 
 # Database Configuration
 DATABASE_NAME = os.getenv("DATABASE_NAME", "autoipindia")
