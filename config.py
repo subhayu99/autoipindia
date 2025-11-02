@@ -20,12 +20,8 @@ TRADEMARKS_FAILED_TABLE_NAME = os.getenv("TRADEMARKS_FAILED_TABLE_NAME", "failed
 TRADEMARKS_STATUS_FQN = f"{DATABASE_NAME}.{TRADEMARKS_STATUS_TABLE_NAME}"
 TRADEMARKS_FAILED_FQN = f"{DATABASE_NAME}.{TRADEMARKS_FAILED_TABLE_NAME}"
 
-# Scraping Configuration
-CAPTCHA_MAX_RETRIES = int(os.getenv("CAPTCHA_MAX_RETRIES", 5))
-BATCH_SIZE = int(os.getenv("BATCH_SIZE", "10"))
-DELAY_BETWEEN_REQUESTS = int(os.getenv("DELAY_BETWEEN_REQUESTS", 5))
-
 # Sample Captcha Configuration
+CAPTCHA_MAX_RETRIES = int(os.getenv("CAPTCHA_MAX_RETRIES", 5))
 SAMPLE_CAPTCHA_DIR = Path("sample_captchas")
 CAPTCHA_EXAMPLES = [
     ("sample0.jpeg", "372006"),
@@ -43,8 +39,3 @@ CAPTCHA_EXAMPLES = [
 CAPTCHA_EXAMPLES = [
     (SAMPLE_CAPTCHA_DIR / filename, code) for filename, code in CAPTCHA_EXAMPLES
 ]
-
-
-# Prefect Configuration
-PREFECT_API_URL = os.getenv("PREFECT_API_URL", "https://api.prefect.cloud")
-PREFECT_WORKSPACE = os.getenv("PREFECT_WORKSPACE")
