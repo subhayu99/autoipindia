@@ -1,8 +1,34 @@
 # AutoIPIndia - Automated Indian Trademark Status Tracker
 
-A comprehensive Python-based automation tool for tracking trademark statuses on the Indian IP office website.
+A comprehensive full-stack application for tracking trademark statuses on the Indian IP office website, with multiple frontend options.
 
-## Features
+## 📁 Project Structure
+
+```
+autoipindia/
+├── backend/              # FastAPI backend with Playwright scraping
+│   ├── main.py              # API endpoints
+│   ├── config.py            # Configuration
+│   ├── db.py                # Database connection
+│   ├── logic/               # Business logic
+│   ├── helpers/             # Utilities (CAPTCHA solver)
+│   ├── sample_captchas/     # CAPTCHA training data
+│   ├── Dockerfile           # Backend container
+│   └── requirements.txt     # Python dependencies
+│
+├── frontend/             # Dash (Python) admin panel
+│   ├── app.py               # Dash application
+│   ├── Dockerfile           # Frontend container
+│   └── requirements.txt     # Python dependencies
+│
+└── react_fe/             # React (TypeScript) modern UI
+    ├── src/                 # React components
+    ├── Dockerfile           # React container
+    ├── package.json         # Node dependencies
+    └── README.md            # React-specific docs
+```
+
+## ✨ Features
 
 ### Backend (FastAPI)
 - 🔐 **Secure API**: Bearer token authentication for all endpoints
@@ -12,24 +38,32 @@ A comprehensive Python-based automation tool for tracking trademark statuses on 
 - 🚀 **FastAPI**: Modern, fast REST API with automatic documentation
 - 🐳 **Docker Ready**: Containerized deployment with all dependencies
 
-### Frontend (Dash)
+### Frontend Options
+
+#### Option 1: Dash (Python)
 - 🎨 **Professional Dashboard**: Interactive admin panel built with Plotly Dash
 - 📋 **Interactive Tables**: Sort, filter, and search with AG Grid
 - 🔄 **Click-to-Refresh**: Re-ingest any trademark with one click
 - ➕ **Easy Ingestion**: Form-based interface for adding new trademarks
 - 📈 **Real-time Stats**: Live dashboard with trademark statistics
-- 🌐 **Separate Deployment**: Deploy frontend independently from backend
+- 🐍 **Pure Python**: Easy to maintain if you're a Python developer
+
+#### Option 2: React (TypeScript)
+- ⚛️ **Modern React**: Built with React 18 + TypeScript + Vite
+- 🎯 **Type-Safe**: Full TypeScript coverage
+- ⚡ **Lightning Fast**: Vite for instant HMR and optimized builds
+- 📊 **TanStack Table**: Advanced data grid with sorting, filtering, pagination
+- 🎨 **TailwindCSS**: Beautiful, responsive design
+- 🌐 **Deploy Anywhere**: Vercel, Netlify, S3, or any static host
 
 ## 🏗️ Architecture
-
-This project consists of two separate applications that can be deployed independently:
 
 ```
 ┌─────────────────────┐         HTTP + Bearer Token        ┌──────────────────────┐
 │                     │ ───────────────────────────────────▶│                      │
-│  Dash Frontend      │                                     │  FastAPI Backend     │
-│  (Python/Plotly)    │ ◀───────────────────────────────────│  (Playwright)        │
-│  Port 8050          │         JSON Responses              │  Port 8000           │
+│  Frontend           │                                     │  FastAPI Backend     │
+│  (Dash or React)    │ ◀───────────────────────────────────│  (Playwright)        │
+│  Port 8050/3000     │         JSON Responses              │  Port 8000           │
 └─────────────────────┘                                     └──────────────────────┘
          │                                                            │
          │                                                            │
@@ -39,153 +73,138 @@ This project consists of two separate applications that can be deployed independ
 
 **Benefits of Separation:**
 - Deploy backend on Google Cloud Run (auto-scaling, pay-per-use)
-- Deploy frontend on Render/Railway/Netlify (optimized for web apps)
+- Deploy Dash frontend on Render/Railway (Python hosting)
+- Deploy React frontend on Vercel/Netlify (optimized for static sites)
 - Scale independently based on usage
 - Update frontend without touching backend and vice versa
 
-## Quick Start
+## 🚀 Quick Start
 
-### Option 1: Run Backend Only (API)
+### Option 1: Backend Only (API)
 
 Perfect if you want to use the API programmatically or build your own frontend.
 
-#### 1. Set up environment variables
-
 ```bash
+cd backend
+
+# Configure environment
 cp .env.example .env
-# Edit .env and add your credentials:
-# - API_TOKEN: Your chosen secret token for API authentication
-# - GEMINI_API_KEY: From https://aistudio.google.com/apikey
-# - MOTHERDUCK_TOKEN: From https://motherduck.com
+# Edit .env with your API_TOKEN, GEMINI_API_KEY, MOTHERDUCK_TOKEN
+
+# Run with Docker
+docker build -t autoipindia-backend .
+docker run -d -p 8000:8000 --env-file .env autoipindia-backend
+
+# OR run locally
+pip install -r requirements.txt
+playwright install chromium
+python main.py
 ```
 
-#### 2. Build and run backend with Docker
-
-```bash
-# Build the Docker image
-docker build -t autoipindia .
-
-# Run the container
-docker run -d \
-  --name autoipindia \
-  -p 8000:8000 \
-  --env-file .env \
-  autoipindia
-```
-
-#### 3. Access the API
-
-The API will be available at `http://localhost:8000`
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+**Access API:** http://localhost:8000/docs
 
 ---
 
-### Option 2: Run Full Stack (Backend + Frontend)
+### Option 2: Backend + Dash Frontend
 
-Get a complete admin dashboard with interactive UI.
-
-#### 1. Start the Backend
+Get a complete Python-based admin dashboard.
 
 ```bash
-# From project root
-cp .env.example .env
-# Edit .env with your credentials
-
+# Terminal 1 - Start Backend
+cd backend
+cp .env.example .env  # Edit with your credentials
 docker build -t autoipindia-backend .
-docker run -d --name autoipindia-backend -p 8000:8000 --env-file .env autoipindia-backend
-```
+docker run -d -p 8000:8000 --env-file .env autoipindia-backend
 
-#### 2. Start the Frontend
-
-```bash
-# Navigate to frontend directory
+# Terminal 2 - Start Dash Frontend
 cd frontend
-
-# Configure frontend
 cp .env.example .env
-# Edit frontend/.env with:
-# - API_BASE_URL=http://localhost:8000
-# - API_TOKEN=<same token as backend>
+# Edit with:
+#   API_BASE_URL=http://localhost:8000
+#   API_TOKEN=<same as backend>
 
-# Run with Docker
-docker build -t autoipindia-frontend .
-docker run -d --name autoipindia-frontend -p 8050:8050 --env-file .env autoipindia-frontend
-
-# OR run locally (development)
 pip install -r requirements.txt
 python app.py
 ```
 
-#### 3. Access the Dashboard
+**Access:**
+- **Dashboard:** http://localhost:8050
+- **API Docs:** http://localhost:8000/docs
 
-- **Frontend Dashboard**: http://localhost:8050
-- **Backend API**: http://localhost:8000/docs
+📚 **See [frontend/README.md](frontend/README.md) for detailed Dash deployment guides**
 
-**📚 For detailed frontend documentation, deployment options, and customization, see [frontend/README.md](frontend/README.md)**
+---
 
-## Authentication
+### Option 3: Backend + React Frontend
 
-All API endpoints require Bearer token authentication. Include your API token in the Authorization header:
-
-```bash
-curl -H "Authorization: Bearer YOUR_API_TOKEN" http://localhost:8000/retrieve/all
-```
-
-Or using Python:
-
-```python
-import requests
-
-headers = {
-    "Authorization": "Bearer YOUR_API_TOKEN"
-}
-
-response = requests.get("http://localhost:8000/retrieve/all", headers=headers)
-print(response.json())
-```
-
-## Local Development Setup
-
-### Prerequisites
-
-- Python 3.11+
-- Playwright
-- API keys for Gemini and MotherDuck
-
-### Installation
+Modern, fast React + TypeScript UI.
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd autoipindia
+# Terminal 1 - Start Backend
+cd backend
+cp .env.example .env  # Edit with your credentials
+docker build -t autoipindia-backend .
+docker run -d -p 8000:8000 --env-file .env autoipindia-backend
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Install Playwright browsers
-playwright install chromium
-
-# Set up environment variables
+# Terminal 2 - Start React Frontend
+cd react_fe
+npm install
 cp .env.example .env
-# Edit .env with your credentials
+# Edit with:
+#   VITE_API_BASE_URL=http://localhost:8000
+#   VITE_API_TOKEN=<same as backend>
+
+npm run dev
 ```
 
-### Running Locally
+**Access:**
+- **React App:** http://localhost:3000
+- **API Docs:** http://localhost:8000/docs
 
-```bash
-# Make sure .env is configured with your API_TOKEN and other credentials
-python main.py
-```
+📚 **See [react_fe/README.md](react_fe/README.md) for detailed React deployment guides**
 
-The server will start at http://localhost:8000 with hot reload enabled.
+---
 
-## API Endpoints
+## 🌐 Deployment Recommendations
+
+### Backend (FastAPI)
+- **Google Cloud Run** ⭐ - Best for auto-scaling, pay-per-request
+- **Railway** - Simple deployment with $5 free credit
+- **Render** - Free tier available
+- **Heroku** - Traditional PaaS (starts at $7/month)
+
+### Dash Frontend (Python)
+- **Render** ⭐ - Easy deployment, free tier
+- **Railway** - Good for Python apps
+- **PythonAnywhere** - Budget option ($5/month)
+- **Google Cloud Run** - Can deploy alongside backend
+
+### React Frontend (TypeScript)
+- **Vercel** ⭐ - Best for React, free tier, instant deploys
+- **Netlify** ⭐ - Great for static sites, free tier
+- **AWS S3 + CloudFront** - Very cheap, highly scalable
+- **Google Cloud Run** - Can deploy alongside backend
+- **Any static host** - GitHub Pages, Cloudflare Pages, etc.
+
+## 🎯 Which Frontend Should You Choose?
+
+| Criteria | Dash (Python) | React (TypeScript) |
+|----------|---------------|-------------------|
+| **Your Experience** | Python developer | JavaScript/TypeScript developer |
+| **Learning Curve** | Easy | Medium |
+| **Customization** | Good | Unlimited |
+| **Performance** | Good | Excellent |
+| **Deployment** | Python hosting | Static hosting (cheaper) |
+| **Mobile UX** | Good | Excellent |
+| **Development Speed** | Fast | Medium |
+| **Best For** | Internal tools, Python teams | Public apps, custom UIs |
+
+**Recommendation:**
+- 🐍 **Dash** if you're a Python developer and want fast development
+- ⚛️ **React** if you want maximum customization and best performance
+- 🎯 **Both** work great! You can even deploy both and let users choose
+
+## 📚 API Endpoints
 
 All endpoints require `Authorization: Bearer YOUR_API_TOKEN` header.
 
@@ -201,7 +220,9 @@ All endpoints require `Authorization: Bearer YOUR_API_TOKEN` header.
 - `GET /search/tm?wordmark=X&class_name=Y` - Search by wordmark and class
 - `GET /search/tm/{application_number}` - Search by application number
 
-## Environment Variables
+## 🔧 Environment Variables
+
+### Backend
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -209,65 +230,132 @@ All endpoints require `Authorization: Bearer YOUR_API_TOKEN` header.
 | `GEMINI_API_KEY` | Yes | Google Gemini API key for CAPTCHA solving |
 | `MOTHERDUCK_TOKEN` | Yes | MotherDuck token for database access |
 | `DATABASE_NAME` | No | Database name (default: `autoipindia`) |
-| `DATABASE_PROTOCOL` | No | Database protocol (default: `duckdb:///`) |
-| `TRADEMARKS_STATUS_TABLE_NAME` | No | Status table name (default: `trademark_status`) |
-| `TRADEMARKS_FAILED_TABLE_NAME` | No | Failed table name (default: `failed_trademarks`) |
 | `CAPTCHA_MAX_RETRIES` | No | Max CAPTCHA solve attempts (default: `5`) |
 
-## 🌐 Deployment Recommendations
+### Dash Frontend
 
-### Backend (FastAPI)
-- **Google Cloud Run** - Best for auto-scaling, pay-per-request (recommended)
-- **Railway** - Simple deployment with $5 free credit
-- **Render** - Free tier available
-- **Heroku** - Traditional PaaS (starts at $7/month)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `API_BASE_URL` | Yes | Backend API URL |
+| `API_TOKEN` | Yes | API token (must match backend) |
+| `PORT` | No | Port for frontend server (default: `8050`) |
 
-### Frontend (Dash)
-- **Render** - Easy deployment, free tier (recommended for frontend)
-- **Railway** - Good for Python apps
-- **PythonAnywhere** - Budget option ($5/month)
-- **Google Cloud Run** - Can deploy alongside backend
+### React Frontend
 
-See [frontend/README.md](frontend/README.md) for detailed deployment instructions for each platform.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_BASE_URL` | Yes | Backend API URL |
+| `VITE_API_TOKEN` | Yes | API token (must match backend) |
+
+## 🔒 Security Notes
+
+- ⚠️ **Never commit `.env` files** - they contain sensitive credentials
+- 🔑 Use strong, randomly generated `API_TOKEN`
+- 🔒 Use HTTPS in production environments
+- 🚫 Restrict network access to the API in production
+- 🛡️ Keep all dependencies updated
+
+## 🐳 Docker Compose (All Services)
+
+Create `docker-compose.yml` in project root:
+
+```yaml
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - API_TOKEN=${API_TOKEN}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MOTHERDUCK_TOKEN=${MOTHERDUCK_TOKEN}
+    env_file:
+      - ./backend/.env
+
+  dash-frontend:
+    build: ./frontend
+    ports:
+      - "8050:8050"
+    environment:
+      - API_BASE_URL=http://backend:8000
+      - API_TOKEN=${API_TOKEN}
+    depends_on:
+      - backend
+
+  react-frontend:
+    build:
+      context: ./react_fe
+      args:
+        - VITE_API_BASE_URL=http://localhost:8000
+        - VITE_API_TOKEN=${API_TOKEN}
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+```
+
+Run everything:
+```bash
+docker-compose up -d
+```
+
+## 🛠️ Development
+
+### Backend Development
+
+```bash
+cd backend
+pip install -r requirements.txt
+playwright install chromium
+python main.py
+```
+
+### Dash Frontend Development
+
+```bash
+cd frontend
+pip install -r requirements.txt
+python app.py
+```
+
+### React Frontend Development
+
+```bash
+cd react_fe
+npm install
+npm run dev
+```
+
+## 📖 Documentation
+
+- **Backend API:** http://localhost:8000/docs (Swagger UI)
+- **Dash Frontend:** [frontend/README.md](frontend/README.md)
+- **React Frontend:** [react_fe/README.md](react_fe/README.md)
+
+## 🤝 Contributing
+
+Contributions welcome! Each component (backend, Dash frontend, React frontend) can be developed independently.
+
+## 📄 License
+
+See LICENSE file for details.
 
 ---
 
-## Docker Configuration
+## 🎉 What's Included
 
-The Dockerfile includes:
-- Python 3.11 slim base image
-- All Playwright dependencies for Chromium
-- Optimized layer caching for faster builds
-- Non-root user for security
-- Health checks for container monitoring
-- Port 8000 exposed for API access
+✅ Production-ready FastAPI backend with authentication
+✅ Playwright automation with AI CAPTCHA solving
+✅ Two complete frontend options (Dash + React)
+✅ Docker support for all components
+✅ Comprehensive deployment guides
+✅ Type-safe TypeScript frontend
+✅ Modern Python Dash frontend
+✅ Real-time data updates
+✅ Interactive data tables
+✅ Responsive design
+✅ Complete documentation
 
-### Docker Commands
-
-```bash
-# Build
-docker build -t autoipindia .
-
-# Run with environment file
-docker run -d -p 8000:8000 --env-file .env --name autoipindia autoipindia
-
-# View logs
-docker logs -f autoipindia
-
-# Stop container
-docker stop autoipindia
-
-# Remove container
-docker rm autoipindia
-```
-
-## Security Notes
-
-- ⚠️ **Never commit your `.env` file** - it contains sensitive credentials
-- 🔑 Use a strong, randomly generated `API_TOKEN`
-- 🔒 Use HTTPS in production environments
-- 🚫 Restrict network access to the API in production
-
-## License
-
-See LICENSE file for details.
+**Choose your stack and deploy!** 🚀
