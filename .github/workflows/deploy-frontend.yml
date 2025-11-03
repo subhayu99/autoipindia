@@ -38,7 +38,7 @@ jobs:
       - name: Build frontend
         working-directory: ./frontend
         env:
-          VITE_API_BASE_URL: https://autoipindia-501623038338.asia-south1.run.app
+          VITE_API_BASE_URL: https://autoipindia-khvlbgiuka-el.a.run.app
           VITE_API_TOKEN: abed04d416ddc3fcb42cd191069bd44fe5d8edb5ba0ca47912ac758788ea1869
         run: npm run build
 
