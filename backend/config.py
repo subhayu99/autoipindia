@@ -69,9 +69,10 @@ def validate_config():
 
     if missing_vars:
         error_msg = f"Missing required environment variables: {', '.join(missing_vars)}"
-        print(f"ERROR: {error_msg}", file=sys.stderr)
-        print("Please set these variables in your .env file", file=sys.stderr)
-        sys.exit(1)
+        print(f"WARNING: {error_msg}", file=sys.stderr)
+        print("The application may not function correctly without these variables", file=sys.stderr)
+        # Don't exit in production - let it start and fail gracefully on actual API calls
+        # sys.exit(1)
 
 # Run validation on import
 validate_config()
