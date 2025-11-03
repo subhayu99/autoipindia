@@ -27,20 +27,6 @@ def create_tables_if_not_exists():
             )
         """))
 
-        # Create indexes for trademark_status table
-        conn.execute(text(f"""
-            CREATE INDEX IF NOT EXISTS idx_app_number
-            ON {TRADEMARKS_STATUS_TABLE_NAME}(application_number)
-        """))
-        conn.execute(text(f"""
-            CREATE INDEX IF NOT EXISTS idx_wordmark_class
-            ON {TRADEMARKS_STATUS_TABLE_NAME}(wordmark, class_name)
-        """))
-        conn.execute(text(f"""
-            CREATE INDEX IF NOT EXISTS idx_timestamp
-            ON {TRADEMARKS_STATUS_TABLE_NAME}(timestamp)
-        """))
-
         # Create failed_trademarks table
         conn.execute(text(f"""
             CREATE TABLE IF NOT EXISTS {TRADEMARKS_FAILED_TABLE_NAME} (
@@ -51,17 +37,7 @@ def create_tables_if_not_exists():
             )
         """))
 
-        # Create indexes for failed_trademarks table
-        conn.execute(text(f"""
-            CREATE INDEX IF NOT EXISTS idx_failed_app_number
-            ON {TRADEMARKS_FAILED_TABLE_NAME}(application_number)
-        """))
-        conn.execute(text(f"""
-            CREATE INDEX IF NOT EXISTS idx_failed_timestamp
-            ON {TRADEMARKS_FAILED_TABLE_NAME}(timestamp)
-        """))
-
-        logger.info("Database tables and indexes created successfully")
+        logger.info("Database tables created successfully")
 
 # Create tables if they don't exist
 create_tables_if_not_exists()

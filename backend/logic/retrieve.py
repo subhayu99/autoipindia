@@ -56,6 +56,10 @@ class TrademarkWithStatus(BaseModel):
             df = pd.DataFrame()
 
         logger.info(f"Found {df.shape[0]} trademarks with status")
+        
+        if not df.empty:
+            df["status"] = df["status"].str.split().str[0]
+        
         return df if as_df else [cls.from_dict(x) for x in df.to_dict(orient="records")]
 
     @classmethod
