@@ -72,7 +72,7 @@ class TrademarkSearchParams(BaseModel):
 
         except Exception as e:
             print(f"Error during trademark search: {str(e)}")
-            return None
+            return f"FAILED! Error: {str(e)}"
         
         if df is not None and not df.empty:
             # Return only required fields                
