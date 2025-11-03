@@ -3,6 +3,7 @@ import { RefreshCw, AlertCircle, Activity, Moon, Sun } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { StatsCards } from './StatsCards';
 import { AddTrademarkForm } from './AddTrademarkForm';
+import CSVUploadForm from './CSVUploadForm';
 import { TrademarkTable } from './TrademarkTable';
 import { JobsPanel } from './JobsPanel';
 import { APIClient } from '../services/api';
@@ -181,6 +182,11 @@ export const Dashboard: React.FC = () => {
 
         {/* Add Trademark Form */}
         <AddTrademarkForm onSubmit={handleAddTrademark} isLoading={ingestMutation.isPending} />
+
+        {/* CSV Upload Form */}
+        <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 transition-colors">
+          <CSVUploadForm />
+        </div>
 
         {/* Loading State */}
         {loadingTrademarks && (

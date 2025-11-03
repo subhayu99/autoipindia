@@ -9,6 +9,7 @@ duckdb-engine>=0.17.0
 fastapi>=0.116.1
 uvicorn[standard]>=0.35.0
 gunicorn>=21.2.0
+python-multipart>=0.0.6
 
 # Development dependencies (uncomment when needed)
 # ipykernel>=6.29.5
