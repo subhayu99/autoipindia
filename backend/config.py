@@ -52,7 +52,7 @@ CAPTCHA_EXAMPLES = [
 # Set CORS_ORIGINS environment variable to override defaults
 CORS_ORIGINS_STR = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:3000,http://localhost:8050,http://127.0.0.1:3000,http://127.0.0.1:8050,https://subhayu99.github.io"
+    "http://localhost:3000,http://localhost:8050,http://127.0.0.1:3000,http://127.0.0.1:8050,https://subhayu99.github.io,https://subhayu99.github.io/autoipindia"
 )
 CORS_ORIGINS = [origin.strip() for origin in CORS_ORIGINS_STR.split(",") if origin.strip()]
 
