@@ -68,5 +68,7 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8080}/docs || exit 1
 
-# Run the application - read PORT from environment variable (Cloud Run sets this to 8080)
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
+# Run the application with Gunicorn + Uvicorn workers for production
+# PORT: Cloud Run sets this to 8080
+# WORKERS: Number of worker processes (default: 2, adjust based on CPU allocation)
+CMD ["sh", "-c", "gunicorn main:app --workers ${WORKERS:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8080} --timeout 120"]
