@@ -16,6 +16,7 @@ class JobStatus(str, Enum):
     RUNNING = "running"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 @dataclass
 class Job:
@@ -28,6 +29,7 @@ class Job:
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     params: Optional[Dict[str, Any]] = None
+    progress: Optional[Dict[str, Any]] = None  # {"current": 10, "total": 100, "percentage": 10.0, "message": "Processing..."}
 
     def to_dict(self):
         data = asdict(self)
@@ -99,6 +101,36 @@ class JobManager:
             job.status = JobStatus.FAILED
             job.completed_at = datetime.now(timezone.utc)
             job.error = error
+
+    def update_progress(self, job_id: str, current: int, total: int, message: str = ""):
+        """Update job progress"""
+        if job := self.jobs.get(job_id):
+            percentage = (current / total * 100) if total > 0 else 0
+            job.progress = {
+                "current": current,
+                "total": total,
+                "percentage": round(percentage, 2),
+                "message": message
+            }
+
+    def cancel_job(self, job_id: str) -> bool:
+        """
+        Cancel a job.
+        Note: This only marks the job as cancelled. The actual background task
+        needs to check job status periodically to respect cancellation.
+        """
+        if job := self.jobs.get(job_id):
+            if job.status in [JobStatus.PENDING, JobStatus.RUNNING]:
+                job.status = JobStatus.CANCELLED
+                job.completed_at = datetime.now(timezone.utc)
+                return True
+        return False
+
+    def is_job_cancelled(self, job_id: str) -> bool:
+        """Check if a job has been cancelled"""
+        if job := self.jobs.get(job_id):
+            return job.status == JobStatus.CANCELLED
+        return False
 
     def cleanup_old_jobs(self, max_jobs: int = 100):
         """Keep only the most recent jobs"""

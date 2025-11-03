@@ -1,11 +1,21 @@
 import duckdb
 from sqlalchemy import create_engine
+from sqlalchemy.pool import QueuePool
 from contextlib import contextmanager
 
 from config import DATABASE_URL, DATABASE_PROTOCOL
 
 
-engine = create_engine(f"{DATABASE_PROTOCOL}{DATABASE_URL}")
+# Create engine with connection pooling configuration
+engine = create_engine(
+    f"{DATABASE_PROTOCOL}{DATABASE_URL}",
+    poolclass=QueuePool,
+    pool_size=10,  # Number of connections to maintain
+    max_overflow=20,  # Additional connections when pool is exhausted
+    pool_pre_ping=True,  # Verify connections before using
+    pool_recycle=3600,  # Recycle connections after 1 hour
+    echo=False  # Set to True for SQL query logging
+)
 
 
 class DatabaseConnection:

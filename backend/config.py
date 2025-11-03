@@ -1,9 +1,13 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import sys
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Logging Configuration
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # API Keys
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -42,3 +46,23 @@ CAPTCHA_EXAMPLES = [
 CAPTCHA_EXAMPLES = [
     (SAMPLE_CAPTCHA_DIR / filename, code) for filename, code in CAPTCHA_EXAMPLES
 ]
+
+# Validate required environment variables
+def validate_config():
+    """Validate that all required environment variables are set."""
+    required_vars = {
+        "API_TOKEN": API_TOKEN,
+        "GEMINI_API_KEY": GEMINI_API_KEY,
+        "MOTHERDUCK_TOKEN": MOTHERDUCK_TOKEN,
+    }
+
+    missing_vars = [var for var, value in required_vars.items() if not value]
+
+    if missing_vars:
+        error_msg = f"Missing required environment variables: {', '.join(missing_vars)}"
+        print(f"ERROR: {error_msg}", file=sys.stderr)
+        print("Please set these variables in your .env file", file=sys.stderr)
+        sys.exit(1)
+
+# Run validation on import
+validate_config()
