@@ -9,8 +9,8 @@ from config import TRADEMARKS_STATUS_FQN, TRADEMARKS_FAILED_FQN
 
 class TrademarkWithStatus(BaseModel):
     application_number: str
-    wordmark: str
-    class_name: str
+    wordmark: str | None
+    class_name: str | None
     status: str
     timestamp: datetime
     
