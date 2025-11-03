@@ -17,6 +17,7 @@ from config import API_TOKEN, LOG_LEVEL
 from jobs import job_manager
 from logger import setup_logger
 from rate_limiter import rate_limit_middleware
+from models import BulkDeleteRequest
 
 # Set up logger
 logger = setup_logger(__name__, LOG_LEVEL)
@@ -427,7 +428,7 @@ async def delete_by_application_number(
 
 @app.post("/delete/bulk")
 async def bulk_delete_trademarks(
-    request: dict,
+    request: BulkDeleteRequest,
     token: str = Depends(verify_token),
 ):
     """
@@ -438,22 +439,8 @@ async def bulk_delete_trademarks(
         "application_numbers": ["123456", "234567", "345678"]
     }
     """
-    application_numbers = request.get("application_numbers", [])
-
-    if not application_numbers:
-        raise HTTPException(
-            status_code=400,
-            detail="application_numbers list is required"
-        )
-
-    if len(application_numbers) > 1000:
-        raise HTTPException(
-            status_code=400,
-            detail="Maximum 1000 application numbers allowed per request"
-        )
-
-    logger.info(f"Bulk delete request for {len(application_numbers)} trademarks")
-    result = TrademarkWithStatus.bulk_delete_by_application_numbers(application_numbers)
+    logger.info(f"Bulk delete request for {len(request.application_numbers)} trademarks")
+    result = TrademarkWithStatus.bulk_delete_by_application_numbers(request.application_numbers)
 
     return result
 
