@@ -21,7 +21,7 @@ app.add_middleware(
         "http://localhost:8050",      # Dash frontend
         "http://127.0.0.1:3000",      # Alternative localhost
         "http://127.0.0.1:8050",      # Alternative localhost
-        # Add your production frontend URLs here when deploying
+        "https://subhayu99.github.io", # GitHub Pages
     ],
     allow_credentials=True,
     allow_methods=["*"],              # Allow all methods (GET, POST, OPTIONS, etc.)
