@@ -1,5 +1,14 @@
 import axios from 'axios';
-import type { Trademark, IngestResponse, Job, CSVImportResponse } from '../types';
+import type {
+  Trademark,
+  IngestResponse,
+  Job,
+  CSVImportResponse,
+  PaginatedResponse,
+  SearchFilters,
+  BulkDeleteResponse,
+  HealthCheckResponse
+} from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const API_TOKEN = import.meta.env.VITE_API_TOKEN;
@@ -88,6 +97,60 @@ export class APIClient {
   // Get trademark history
   static async getHistoryByApplicationNumber(applicationNumber: string): Promise<Trademark[]> {
     const response = await api.get<Trademark[]>(`/history/tm/${applicationNumber}`);
+    return response.data;
+  }
+
+  // Pagination and filtering
+  static async getPaginatedTrademarks(
+    page: number = 1,
+    pageSize: number = 50,
+    filters?: SearchFilters
+  ): Promise<PaginatedResponse> {
+    const response = await api.get<PaginatedResponse>('/retrieve/paginated', {
+      params: {
+        page,
+        page_size: pageSize,
+        ...(filters?.wordmark && { wordmark: filters.wordmark }),
+        ...(filters?.class_name && { class_name: filters.class_name }),
+        ...(filters?.status && { status: filters.status }),
+        ...(filters?.application_number && { application_number: filters.application_number }),
+      },
+    });
+    return response.data;
+  }
+
+  // Bulk operations
+  static async bulkDeleteTrademarks(applicationNumbers: string[]): Promise<BulkDeleteResponse> {
+    const response = await api.post<BulkDeleteResponse>('/delete/bulk', {
+      application_numbers: applicationNumbers,
+    });
+    return response.data;
+  }
+
+  // Export functionality
+  static async exportToCSV(): Promise<Blob> {
+    const response = await api.get('/export/csv', {
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
+  static async exportToExcel(): Promise<Blob> {
+    const response = await api.get('/export/excel', {
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
+  // Job cancellation
+  static async cancelJob(jobId: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.post<{ success: boolean; message: string }>(`/jobs/${jobId}/cancel`);
+    return response.data;
+  }
+
+  // Health check
+  static async healthCheck(): Promise<HealthCheckResponse> {
+    const response = await api.get<HealthCheckResponse>('/health');
     return response.data;
   }
 }

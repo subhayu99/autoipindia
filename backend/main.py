@@ -1,7 +1,11 @@
 from fastapi import FastAPI, Query, HTTPException, Security, Depends, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
+import secrets
+import io
+import pandas as pd
 from logic import (
     ingest_trademark_status,
     get_trademarks_to_ingest,
@@ -9,13 +13,19 @@ from logic import (
     TrademarkWithStatus,
 )
 from logic.csv_import import process_csv_upload, CSVImportError
-from config import API_TOKEN
+from config import API_TOKEN, LOG_LEVEL
 from jobs import job_manager
+from logger import setup_logger
+from rate_limiter import rate_limit_middleware
+from models import BulkDeleteRequest
+
+# Set up logger
+logger = setup_logger(__name__, LOG_LEVEL)
 
 
 app = FastAPI()
 
-# Configure CORS
+# Configure CORS with explicit whitelisting
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -26,17 +36,58 @@ app.add_middleware(
         "https://subhayu99.github.io", # GitHub Pages
     ],
     allow_credentials=True,
-    allow_methods=["*"],              # Allow all methods (GET, POST, OPTIONS, etc.)
-    allow_headers=["*"],              # Allow all headers including Authorization
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Explicit methods
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "User-Agent",
+        "DNT",
+        "Cache-Control",
+        "X-Requested-With",
+    ],
+    expose_headers=["Content-Length", "Content-Type"],
+    max_age=600,  # Cache preflight requests for 10 minutes
 )
 
 security = HTTPBearer()
+
+
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint for monitoring and load balancers.
+    Does not require authentication.
+    """
+    from db import engine
+    from sqlalchemy import text
+
+    # Check database connection
+    db_status = "healthy"
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+        logger.error(f"Database health check failed: {str(e)}")
+
+    response = {
+        "status": "healthy" if db_status == "healthy" else "degraded",
+        "version": "1.0.0",
+        "database": db_status,
+        "service": "autoipindia-api"
+    }
+
+    status_code = 200 if db_status == "healthy" else 503
+    return response if status_code == 200 else HTTPException(status_code=status_code, detail=response)
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)):
     """
     Verify the Bearer token matches the configured API_TOKEN.
     Raises HTTPException if token is invalid or missing.
+    Uses constant-time comparison to prevent timing attacks.
     """
     if not API_TOKEN:
         raise HTTPException(
@@ -44,7 +95,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Security(security))
             detail="API_TOKEN not configured on server"
         )
 
-    if credentials.credentials != API_TOKEN:
+    if not secrets.compare_digest(credentials.credentials, API_TOKEN):
         raise HTTPException(
             status_code=401,
             detail="Invalid authentication token"
@@ -55,12 +106,15 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Security(security))
 def run_ingestion_job(job_id: str, params: List[TrademarkSearchParams]):
     """Background task to run trademark ingestion"""
     try:
+        logger.info(f"Starting ingestion job {job_id} with {len(params)} trademarks")
         job_manager.start_job(job_id)
         result = ingest_trademark_status(
             params, max_workers=1, headless=True, write_each_to_db=True
         )
         job_manager.complete_job(job_id, result)
+        logger.info(f"Completed ingestion job {job_id}: {result}")
     except Exception as e:
+        logger.error(f"Failed ingestion job {job_id}: {str(e)}", exc_info=True)
         job_manager.fail_job(job_id, str(e))
 
 
@@ -290,10 +344,61 @@ async def get_running_jobs(token: str = Depends(verify_token)):
     return [job.to_dict() for job in jobs]
 
 
-# Trademark retrieval endpoints (unchanged)
+@app.post("/jobs/{job_id}/cancel")
+async def cancel_job(job_id: str, token: str = Depends(verify_token)):
+    """
+    Cancel a running or pending job.
+    Note: Cancellation is cooperative - the background task must check cancellation status.
+    """
+    success = job_manager.cancel_job(job_id)
+
+    if success:
+        logger.info(f"Job {job_id} cancelled successfully")
+        return {"success": True, "message": f"Job {job_id} has been cancelled"}
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found or already completed/failed"
+        )
+
+
+# Trademark retrieval endpoints
 @app.get("/retrieve/all", response_model=list[TrademarkWithStatus])
 async def retrieve(token: str = Depends(verify_token)):
+    """Get all trademarks (non-paginated). Consider using /retrieve/paginated for large datasets."""
     return TrademarkWithStatus.get_all(as_df=False)
+
+
+@app.get("/retrieve/paginated")
+async def retrieve_paginated(
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(50, ge=1, le=1000, description="Items per page"),
+    wordmark: Optional[str] = Query(None, description="Filter by wordmark (partial match)"),
+    class_name: Optional[str] = Query(None, description="Filter by class name"),
+    status: Optional[str] = Query(None, description="Filter by status (partial match)"),
+    application_number: Optional[str] = Query(None, description="Filter by application number (partial match)"),
+    token: str = Depends(verify_token),
+):
+    """
+    Get paginated trademarks with optional filters.
+
+    Supports filtering by:
+    - wordmark (partial, case-insensitive)
+    - class_name (exact match)
+    - status (partial, case-insensitive)
+    - application_number (partial match)
+
+    Returns paginated results with metadata.
+    """
+    return TrademarkWithStatus.get_paginated_with_filters(
+        page=page,
+        page_size=page_size,
+        wordmark=wordmark,
+        class_name=class_name,
+        status=status,
+        application_number=application_number,
+        as_df=False
+    )
 
 
 @app.get("/search/tm", response_model=TrademarkWithStatus)
@@ -319,6 +424,111 @@ async def delete_by_application_number(
     token: str = Depends(verify_token),
 ):
     return TrademarkWithStatus.delete_by_application_number(application_number)
+
+
+@app.post("/delete/bulk")
+async def bulk_delete_trademarks(
+    request: BulkDeleteRequest,
+    token: str = Depends(verify_token),
+):
+    """
+    Bulk delete trademarks by application numbers.
+
+    Request body:
+    {
+        "application_numbers": ["123456", "234567", "345678"]
+    }
+    """
+    logger.info(f"Bulk delete request for {len(request.application_numbers)} trademarks")
+    result = TrademarkWithStatus.bulk_delete_by_application_numbers(request.application_numbers)
+
+    return result
+
+
+@app.get("/export/csv")
+async def export_trademarks_csv(
+    token: str = Depends(verify_token),
+):
+    """
+    Export all trademarks to CSV file.
+    Returns a downloadable CSV file with all trademark data.
+    """
+    logger.info("Exporting trademarks to CSV")
+
+    try:
+        # Get all trademarks as DataFrame
+        trademarks = TrademarkWithStatus.get_all(as_df=True)
+
+        if trademarks.empty:
+            raise HTTPException(
+                status_code=404,
+                detail="No trademarks found to export"
+            )
+
+        # Convert to CSV
+        output = io.StringIO()
+        trademarks.to_csv(output, index=False)
+        output.seek(0)
+
+        # Return as streaming response
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={
+                "Content-Disposition": "attachment; filename=trademarks_export.csv"
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error exporting trademarks to CSV: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to export trademarks: {str(e)}"
+        )
+
+
+@app.get("/export/excel")
+async def export_trademarks_excel(
+    token: str = Depends(verify_token),
+):
+    """
+    Export all trademarks to Excel file.
+    Returns a downloadable Excel file with all trademark data.
+    """
+    logger.info("Exporting trademarks to Excel")
+
+    try:
+        # Get all trademarks as DataFrame
+        trademarks = TrademarkWithStatus.get_all(as_df=True)
+
+        if trademarks.empty:
+            raise HTTPException(
+                status_code=404,
+                detail="No trademarks found to export"
+            )
+
+        # Convert to Excel
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            trademarks.to_excel(writer, index=False, sheet_name='Trademarks')
+
+        output.seek(0)
+
+        # Return as streaming response
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": "attachment; filename=trademarks_export.xlsx"
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error exporting trademarks to Excel: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to export trademarks: {str(e)}"
+        )
 
 
 @app.get("/history/tm/{application_number}", response_model=list[TrademarkWithStatus])

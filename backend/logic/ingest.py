@@ -7,40 +7,73 @@ from sqlalchemy import text
 from db import engine
 from helpers.utils import run_parallel_exec
 from logic.trademark_search import TrademarkSearchParams
-from config import CAPTCHA_MAX_RETRIES, TRADEMARKS_FAILED_FQN, TRADEMARKS_STATUS_FQN, TRADEMARKS_STATUS_TABLE_NAME, TRADEMARKS_FAILED_TABLE_NAME
+from config import CAPTCHA_MAX_RETRIES, TRADEMARKS_FAILED_FQN, TRADEMARKS_STATUS_FQN, TRADEMARKS_STATUS_TABLE_NAME, TRADEMARKS_FAILED_TABLE_NAME, LOG_LEVEL
+from logger import setup_logger
+
+# Set up logger for this module
+logger = setup_logger(__name__, LOG_LEVEL)
 
 
 def create_tables_if_not_exists():
     with engine.connect() as conn:
+        # Create trademark_status table
         conn.execute(text(f"""
             CREATE TABLE IF NOT EXISTS {TRADEMARKS_STATUS_TABLE_NAME} (
-                application_number VARCHAR, 
-                wordmark VARCHAR, 
-                class_name VARCHAR, 
-                status VARCHAR, 
+                application_number VARCHAR,
+                wordmark VARCHAR,
+                class_name VARCHAR,
+                status VARCHAR,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        """))
+
+        # Create indexes for trademark_status table
+        conn.execute(text(f"""
+            CREATE INDEX IF NOT EXISTS idx_app_number
+            ON {TRADEMARKS_STATUS_TABLE_NAME}(application_number)
         """))
         conn.execute(text(f"""
+            CREATE INDEX IF NOT EXISTS idx_wordmark_class
+            ON {TRADEMARKS_STATUS_TABLE_NAME}(wordmark, class_name)
+        """))
+        conn.execute(text(f"""
+            CREATE INDEX IF NOT EXISTS idx_timestamp
+            ON {TRADEMARKS_STATUS_TABLE_NAME}(timestamp)
+        """))
+
+        # Create failed_trademarks table
+        conn.execute(text(f"""
             CREATE TABLE IF NOT EXISTS {TRADEMARKS_FAILED_TABLE_NAME} (
-                wordmark VARCHAR, 
-                class_name VARCHAR, 
-                application_number VARCHAR, 
+                wordmark VARCHAR,
+                class_name VARCHAR,
+                application_number VARCHAR,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+
+        # Create indexes for failed_trademarks table
+        conn.execute(text(f"""
+            CREATE INDEX IF NOT EXISTS idx_failed_app_number
+            ON {TRADEMARKS_FAILED_TABLE_NAME}(application_number)
+        """))
+        conn.execute(text(f"""
+            CREATE INDEX IF NOT EXISTS idx_failed_timestamp
+            ON {TRADEMARKS_FAILED_TABLE_NAME}(timestamp)
+        """))
+
+        logger.info("Database tables and indexes created successfully")
 
 # Create tables if they don't exist
 create_tables_if_not_exists()
 
 
 def _write_failed_to_db(trademark: TrademarkSearchParams):
-    print(f"Writing failed trademark search to database: {trademark.to_dict()}")
+    logger.info(f"Writing failed trademark search to database: {trademark.to_dict()}")
     failed_df = pd.DataFrame([trademark.to_dict()])
     failed_df["timestamp"] = datetime.now(tz=timezone("Asia/Kolkata"))
     with engine.connect() as conn:
         failed_df.to_sql("failed_trademarks", conn, index=False, if_exists="append")
-    print("Wrote failed trademark search to database successfully")
+    logger.info("Wrote failed trademark search to database successfully")
 
 
 def get_trademark_status(trademark: TrademarkSearchParams, headless: bool = True, write_to_db: bool = True) -> dict | None:
@@ -52,22 +85,22 @@ def get_trademark_status(trademark: TrademarkSearchParams, headless: bool = True
         
         if df is not None and not df.empty:
             if not write_to_db:
-                print(f"Returning trademark status: {df.iloc[0].to_dict()}")
+                logger.info(f"Returning trademark status: {df.iloc[0].to_dict()}")
                 return df.iloc[0].to_dict()
-    
+
             if isinstance(df, str):
                 _write_failed_to_db(trademark)
                 return None
-            
-            print(f"Writing trademark status to database: {df}")
+
+            logger.info(f"Writing trademark status to database: {df}")
             df["timestamp"] = datetime.now(tz=timezone("Asia/Kolkata"))
             with engine.connect() as conn:
                 df.to_sql("trademark_status", conn, index=False, if_exists="append")
-            print("Wrote trademark status to database successfully")
+            logger.info("Wrote trademark status to database successfully")
             return df.iloc[0].to_dict()
-    
+
     except Exception as e:
-        print(f"An error occurred while searching for trademark status: {str(e)}")
+        logger.error(f"Error while searching for trademark status: {str(e)}", exc_info=True)
         
         if write_to_db:
             _write_failed_to_db(trademark)
@@ -75,22 +108,87 @@ def get_trademark_status(trademark: TrademarkSearchParams, headless: bool = True
         return None
 
 
-def ingest_trademark_status(trademarks: list[TrademarkSearchParams], max_workers: int = 10, headless: bool = True, write_each_to_db: bool = True):
+def check_existing_trademarks(trademarks: list[TrademarkSearchParams]) -> tuple[list[TrademarkSearchParams], list[TrademarkSearchParams]]:
+    """
+    Check which trademarks already exist in the database and filter them out.
+
+    Args:
+        trademarks: List of trademarks to check
+
+    Returns:
+        Tuple of (new_trademarks, existing_trademarks)
+    """
+    if not trademarks:
+        return [], []
+
+    # Get all application numbers from the input
+    app_numbers = [tm.application_number for tm in trademarks if tm.application_number]
+
+    if not app_numbers:
+        return trademarks, []
+
+    # Escape single quotes for SQL safety
+    app_numbers_str = "', '".join([str(num).replace("'", "''") for num in app_numbers])
+
+    # Query to find existing application numbers
+    query = f"""
+        SELECT DISTINCT CAST(application_number AS STRING) as application_number
+        FROM {TRADEMARKS_STATUS_FQN}
+        WHERE CAST(application_number AS STRING) IN ('{app_numbers_str}')
+    """
+
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql(query, conn)
+
+        existing_app_numbers = set(df['application_number'].tolist()) if not df.empty else set()
+
+        new_trademarks = []
+        existing_trademarks = []
+
+        for tm in trademarks:
+            if tm.application_number and tm.application_number in existing_app_numbers:
+                existing_trademarks.append(tm)
+            else:
+                new_trademarks.append(tm)
+
+        logger.info(f"Duplicate check: {len(new_trademarks)} new, {len(existing_trademarks)} existing")
+        return new_trademarks, existing_trademarks
+
+    except Exception as e:
+        logger.error(f"Error checking for duplicates: {str(e)}", exc_info=True)
+        # If check fails, return all as new to avoid blocking ingestion
+        return trademarks, []
+
+
+def ingest_trademark_status(trademarks: list[TrademarkSearchParams], max_workers: int = 10, headless: bool = True, write_each_to_db: bool = True, skip_duplicates: bool = True):
     """Ingest trademarks into database"""
-    
+
     if not trademarks:
         raise ValueError("trademarks list cannot be empty")
-    
+
+    # Check for duplicates if requested
+    skipped_count = 0
+    if skip_duplicates:
+        trademarks, existing = check_existing_trademarks(trademarks)
+        skipped_count = len(existing)
+        if skipped_count > 0:
+            logger.info(f"Skipping {skipped_count} existing trademarks")
+
+    if not trademarks:
+        logger.info("No new trademarks to ingest after duplicate check")
+        return {"success": 0, "failed": 0, "skipped": skipped_count}
+
     tm_status_map: list[tuple[TrademarkSearchParams, dict | None]] = []
-    
+
     try:
-        print(f"Starting ingestion of {len(trademarks)} trademarks with {max_workers} workers")
+        logger.info(f"Starting ingestion of {len(trademarks)} trademarks with {max_workers} workers")
         tm_status_map = run_parallel_exec(
             get_trademark_status, trademarks, headless, write_each_to_db, max_workers=max_workers,
         )
     except Exception as e:
-        print(f"An error occurred while ingesting trademarks: {str(e)}")
-        return {"success": 0, "failed": len(trademarks)}
+        logger.error(f"Error while ingesting trademarks: {str(e)}", exc_info=True)
+        return {"success": 0, "failed": len(trademarks), "skipped": skipped_count}
     
     successful: list[dict] = []
     failed_tms: list[dict] = []
@@ -101,9 +199,9 @@ def ingest_trademark_status(trademarks: list[TrademarkSearchParams], max_workers
         else:
             failed_tms.append(tm_status[0].to_dict())
     
-    print(f"Finished ingestion of {len(trademarks)} trademarks")
-    print(f"✅ Successfully ingested {len(successful)} trademarks")
-    print(f"❌ Failed to ingest {len(failed_tms)} trademarks")
+    logger.info(f"Finished ingestion of {len(trademarks)} trademarks")
+    logger.info(f"Successfully ingested {len(successful)} trademarks")
+    logger.warning(f"Failed to ingest {len(failed_tms)} trademarks")
     
     if not write_each_to_db:
         current_time = datetime.now(tz=timezone("Asia/Kolkata"))
@@ -116,13 +214,13 @@ def ingest_trademark_status(trademarks: list[TrademarkSearchParams], max_workers
         
         with engine.connect() as conn:
             if not df_success.empty:
-                print(f"Writing {len(successful)} trademarks to database")
+                logger.info(f"Writing {len(successful)} trademarks to database")
                 df_success.to_sql("trademark_status", conn, index=False, if_exists="append")
             if not df_failed.empty:
-                print(f"Writing {len(failed_tms)} failed trademarks to database")
+                logger.info(f"Writing {len(failed_tms)} failed trademarks to database")
                 df_failed.to_sql("failed_trademarks", conn, index=False, if_exists="append")
 
-    return {"success": len(successful), "failed": len(failed_tms)}
+    return {"success": len(successful), "failed": len(failed_tms), "skipped": skipped_count}
 
 
 def get_trademarks_to_ingest(stale_since_days: int = 15) -> list[TrademarkSearchParams]:
@@ -136,7 +234,7 @@ def get_trademarks_to_ingest(stale_since_days: int = 15) -> list[TrademarkSearch
     :param stale_since_days: The number of days since which trademarks should not have been ingested.
     :return: A list of TrademarkSearchParams objects
     """
-    print(f"Retrieving trademarks to ingest that have not been ingested in the last {stale_since_days} days")
+    logger.info(f"Retrieving trademarks to ingest that have not been ingested in the last {stale_since_days} days")
     query = f"""
       WITH succeeded_deduped AS (
         -- Select the latest entry for each application_number from the trademark_status table
@@ -176,12 +274,12 @@ def get_trademarks_to_ingest(stale_since_days: int = 15) -> list[TrademarkSearch
         with engine.connect() as conn:
             df = pd.read_sql(query, conn)
     except Exception as e:
-        print(f"An error occurred while getting trademarks to ingest: {str(e)}")
+        logger.error(f"Error while getting trademarks to ingest: {str(e)}", exc_info=True)
         df = pd.DataFrame()
-    
+
     if df.empty:
-        print("No trademarks to ingest")
+        logger.info("No trademarks to ingest")
         return []
-    
-    print(f"Found {df.shape[0]} trademarks to ingest")
+
+    logger.info(f"Found {df.shape[0]} trademarks to ingest")
     return [TrademarkSearchParams.from_dict(x) for x in df.to_dict(orient="records")]

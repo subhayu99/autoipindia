@@ -7,7 +7,11 @@ from itertools import chain
 from google import genai
 from google.genai import types
 
-from config import CAPTCHA_EXAMPLES
+from config import CAPTCHA_EXAMPLES, LOG_LEVEL
+from logger import setup_logger
+
+# Set up logger for this module
+logger = setup_logger(__name__, LOG_LEVEL)
 
 
 def read_image_bytes(file_path: str | Path):
@@ -88,8 +92,15 @@ def read_captcha(file_path: str | Path, examples: int = 3) -> str | None:
         contents=contents,
         config=generate_content_config,
     )
-    print(response.text)
-    return parse_code(response.text)
+    logger.debug(f"CAPTCHA response: {response.text}")
+
+    code = parse_code(response.text)
+    if code:
+        logger.info(f"Successfully solved CAPTCHA: {code}")
+    else:
+        logger.warning(f"Failed to parse CAPTCHA code from response: {response.text}")
+
+    return code
 
 if __name__ == "__main__":
     print(read_captcha("captcha.png"))

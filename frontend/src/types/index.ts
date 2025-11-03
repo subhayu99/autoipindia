@@ -9,16 +9,23 @@ export interface Trademark {
 export interface Job {
   id: string;
   type: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
   created_at: string;
   started_at?: string;
   completed_at?: string;
   result?: {
     success: number;
     failed: number;
+    skipped?: number;
   };
   error?: string;
   params?: Record<string, any>;
+  progress?: {
+    current: number;
+    total: number;
+    percentage: number;
+    message: string;
+  };
 }
 
 export interface IngestResponse {
@@ -51,4 +58,38 @@ export interface Stats {
   registered: number;
   pending: number;
   other: number;
+}
+
+export interface PaginationMeta {
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface PaginatedResponse {
+  data: Trademark[];
+  pagination: PaginationMeta;
+}
+
+export interface SearchFilters {
+  wordmark?: string;
+  class_name?: string;
+  status?: string;
+  application_number?: string;
+}
+
+export interface BulkDeleteResponse {
+  deleted: number;
+  failed: number;
+  errors: string[];
+}
+
+export interface HealthCheckResponse {
+  status: string;
+  version: string;
+  database: string;
+  service: string;
 }

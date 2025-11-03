@@ -6,20 +6,30 @@ import { AddTrademarkForm } from './AddTrademarkForm';
 import CSVUploadForm from './CSVUploadForm';
 import { TrademarkTable } from './TrademarkTable';
 import { JobsPanel } from './JobsPanel';
+import { SearchFilters } from './SearchFilters';
+import { Pagination } from './Pagination';
+import { ExportButtons } from './ExportButtons';
 import { APIClient } from '../services/api';
 import { useDarkMode } from '../contexts/DarkModeContext';
+import type { SearchFilters as Filters } from '../types';
 
 export const Dashboard: React.FC = () => {
   const queryClient = useQueryClient();
   const [_activeJobs, setActiveJobs] = useState<string[]>([]);
   const { isDark, toggleDarkMode } = useDarkMode();
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [filters, setFilters] = useState<Filters>({});
 
-  // Fetch trademarks
-  const { data: trademarks, isLoading: loadingTrademarks, error: trademarksError, refetch: refetchTrademarks } = useQuery({
-    queryKey: ['trademarks'],
-    queryFn: APIClient.getAllTrademarks,
+  // Fetch paginated trademarks with filters
+  const { data: paginatedData, isLoading: loadingTrademarks, error: trademarksError, refetch: refetchTrademarks } = useQuery({
+    queryKey: ['trademarks', page, pageSize, filters],
+    queryFn: () => APIClient.getPaginatedTrademarks(page, pageSize, filters),
     staleTime: 10000,
   });
+
+  const trademarks = paginatedData?.data || [];
+  const pagination = paginatedData?.pagination;
 
   // Fetch all jobs
   const { data: jobs, refetch: refetchJobs } = useQuery({
@@ -87,6 +97,20 @@ export const Dashboard: React.FC = () => {
     } catch (error) {
       console.error('Failed to start refresh all:', error);
     }
+  };
+
+  const handleFiltersChange = (newFilters: Filters) => {
+    setFilters(newFilters);
+    setPage(1); // Reset to first page when filters change
+  };
+
+  const handleSearch = () => {
+    refetchTrademarks();
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const runningJobsCount = jobs?.filter(j => j.status === 'running').length || 0;
@@ -178,7 +202,7 @@ export const Dashboard: React.FC = () => {
         {trademarks && <StatsCards trademarks={trademarks} />}
 
         {/* Jobs Panel */}
-        {jobs && jobs.length > 0 && <JobsPanel jobs={jobs} />}
+        {jobs && jobs.length > 0 && <JobsPanel jobs={jobs} onJobUpdate={refetchJobs} />}
 
         {/* Add Trademark Form */}
         <AddTrademarkForm onSubmit={handleAddTrademark} isLoading={ingestMutation.isPending} />
@@ -187,6 +211,22 @@ export const Dashboard: React.FC = () => {
         <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 transition-colors">
           <CSVUploadForm />
         </div>
+
+        {/* Search Filters */}
+        <div className="mt-8">
+          <SearchFilters
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            onSearch={handleSearch}
+          />
+        </div>
+
+        {/* Export Buttons */}
+        {trademarks && trademarks.length > 0 && (
+          <div className="mt-4 flex justify-end">
+            <ExportButtons />
+          </div>
+        )}
 
         {/* Loading State */}
         {loadingTrademarks && (
@@ -200,13 +240,22 @@ export const Dashboard: React.FC = () => {
 
         {/* Table */}
         {trademarks && trademarks.length > 0 && (
-          <TrademarkTable
-            data={trademarks}
-            onRefresh={handleRefresh}
-            onDelete={handleDelete}
-            isRefreshing={ingestMutation.isPending}
-            isDark={isDark}
-          />
+          <>
+            <TrademarkTable
+              data={trademarks}
+              onRefresh={handleRefresh}
+              onDelete={handleDelete}
+              isRefreshing={ingestMutation.isPending}
+              isDark={isDark}
+            />
+            {/* Pagination */}
+            {pagination && (
+              <Pagination
+                pagination={pagination}
+                onPageChange={handlePageChange}
+              />
+            )}
+          </>
         )}
 
         {/* Empty State */}
