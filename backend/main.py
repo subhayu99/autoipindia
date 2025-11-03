@@ -13,7 +13,7 @@ from logic import (
     TrademarkWithStatus,
 )
 from logic.csv_import import process_csv_upload, CSVImportError
-from config import API_TOKEN, LOG_LEVEL
+from config import API_TOKEN, LOG_LEVEL, CORS_ORIGINS
 from jobs import job_manager
 from logger import setup_logger
 from rate_limiter import rate_limit_middleware
@@ -26,15 +26,10 @@ logger = setup_logger(__name__, LOG_LEVEL)
 app = FastAPI()
 
 # Configure CORS with explicit whitelisting
+# CORS origins can be configured via CORS_ORIGINS environment variable
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",      # React dev server
-        "http://localhost:8050",      # Dash frontend
-        "http://127.0.0.1:3000",      # Alternative localhost
-        "http://127.0.0.1:8050",      # Alternative localhost
-        "https://subhayu99.github.io", # GitHub Pages
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Explicit methods
     allow_headers=[
@@ -50,6 +45,8 @@ app.add_middleware(
     expose_headers=["Content-Length", "Content-Type"],
     max_age=600,  # Cache preflight requests for 10 minutes
 )
+
+logger.info(f"CORS enabled for origins: {CORS_ORIGINS}")
 
 security = HTTPBearer()
 

@@ -47,6 +47,15 @@ CAPTCHA_EXAMPLES = [
     (SAMPLE_CAPTCHA_DIR / filename, code) for filename, code in CAPTCHA_EXAMPLES
 ]
 
+# CORS Configuration
+# Allow multiple origins separated by comma
+# Set CORS_ORIGINS environment variable to override defaults
+CORS_ORIGINS_STR = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,http://localhost:8050,http://127.0.0.1:3000,http://127.0.0.1:8050,https://subhayu99.github.io,https://subhayu99.github.io/autoipindia"
+)
+CORS_ORIGINS = [origin.strip() for origin in CORS_ORIGINS_STR.split(",") if origin.strip()]
+
 # Validate required environment variables
 def validate_config():
     """Validate that all required environment variables are set."""
