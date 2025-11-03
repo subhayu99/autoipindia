@@ -25,25 +25,13 @@ logger = setup_logger(__name__, LOG_LEVEL)
 
 app = FastAPI()
 
-# Configure CORS with explicit whitelisting
-# CORS origins can be configured via CORS_ORIGINS environment variable
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Explicit methods
-    allow_headers=[
-        "Authorization",
-        "Content-Type",
-        "Accept",
-        "Origin",
-        "User-Agent",
-        "DNT",
-        "Cache-Control",
-        "X-Requested-With",
-    ],
-    expose_headers=["Content-Length", "Content-Type"],
-    max_age=600,  # Cache preflight requests for 10 minutes
+    allow_origins=CORS_ORIGINS,       # Allow all configured origins
+    allow_credentials=True,           # Allow credentials (e.g., cookies)
+    allow_methods=["*"],              # Allow all methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],              # Allow all headers including Authorization
 )
 
 logger.info(f"CORS enabled for origins: {CORS_ORIGINS}")
