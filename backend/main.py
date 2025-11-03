@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, HTTPException, Security, Depends, BackgroundTasks
+from fastapi import FastAPI, Query, HTTPException, Security, Depends, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List, Optional
@@ -8,6 +8,7 @@ from logic import (
     TrademarkSearchParams,
     TrademarkWithStatus,
 )
+from logic.csv_import import process_csv_upload, CSVImportError
 from config import API_TOKEN
 from jobs import job_manager
 
@@ -170,6 +171,99 @@ async def ingest_by_application_number(
         "status": "started",
         "message": f"Ingestion job started for {application_number}"
     }
+
+
+@app.post("/import/csv")
+async def import_csv(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    token: str = Depends(verify_token),
+):
+    """
+    Import trademarks from CSV file and start background ingestion job.
+
+    Expected CSV formats:
+    1. application_number only:
+       ```
+       application_number
+       1234567
+       2345678
+       ```
+
+    2. wordmark and class_name:
+       ```
+       wordmark,class_name
+       NIKE,25
+       APPLE,9
+       ```
+
+    3. All fields (application_number, wordmark, class_name)
+
+    Returns job_id for tracking the ingestion progress.
+    """
+    # Check if we can start a new job
+    if not job_manager.can_start_job():
+        running_count = len(job_manager.get_running_jobs())
+        raise HTTPException(
+            status_code=429,
+            detail=f"Maximum concurrent jobs ({job_manager.max_concurrent_jobs}) reached. Currently running: {running_count}"
+        )
+
+    # Validate file type
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(
+            status_code=400,
+            detail="Only CSV files are supported"
+        )
+
+    try:
+        # Read file content
+        content = await file.read()
+        file_content = content.decode('utf-8')
+
+        # Process CSV and validate
+        result = process_csv_upload(file_content)
+
+        # Check if there are any valid trademarks
+        if result['valid_count'] == 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"No valid trademarks found in CSV. Errors: {result['errors']}"
+            )
+
+        # Convert trademarks back to TrademarkSearchParams objects
+        params = [TrademarkSearchParams(**tm) for tm in result['trademarks']]
+
+        # Create job
+        job = job_manager.create_job(
+            job_type="ingest_csv",
+            params={
+                "filename": file.filename,
+                "valid_count": result['valid_count'],
+                "error_count": result['error_count'],
+                "errors": result['errors'][:10] if result['errors'] else []  # Limit errors to first 10
+            }
+        )
+
+        # Start background task
+        background_tasks.add_task(run_ingestion_job, job.id, params)
+
+        return {
+            "job_id": job.id,
+            "status": "started",
+            "message": f"CSV import started for {result['valid_count']} trademarks",
+            "valid_count": result['valid_count'],
+            "error_count": result['error_count'],
+            "errors": result['errors'][:10] if result['errors'] else []  # Return first 10 errors
+        }
+
+    except CSVImportError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process CSV file: {str(e)}"
+        )
 
 
 # Job status endpoints

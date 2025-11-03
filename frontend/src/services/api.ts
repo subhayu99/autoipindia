@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Trademark, IngestResponse, Job } from '../types';
+import type { Trademark, IngestResponse, Job, CSVImportResponse } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const API_TOKEN = import.meta.env.VITE_API_TOKEN;
@@ -46,6 +46,19 @@ export class APIClient {
   static async ingestAll(staleSinceDays: number = 15): Promise<IngestResponse> {
     const response = await api.get<IngestResponse>('/ingest/all', {
       params: { stale_since_days: staleSinceDays },
+    });
+    return response.data;
+  }
+
+  static async uploadCSV(file: File): Promise<CSVImportResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post<CSVImportResponse>('/import/csv', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...(API_TOKEN && { Authorization: `Bearer ${API_TOKEN}` }),
+      },
     });
     return response.data;
   }

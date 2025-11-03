@@ -27,6 +27,25 @@ export interface IngestResponse {
   message: string;
 }
 
+export interface CSVImportResponse extends IngestResponse {
+  valid_count: number;
+  error_count: number;
+  errors: Array<{
+    row: number;
+    data: Record<string, any>;
+    error: string;
+  }>;
+}
+
+export interface CSVRow {
+  id: string;
+  application_number?: string;
+  wordmark?: string;
+  class_name?: string | number;
+  isValid?: boolean;
+  error?: string;
+}
+
 export interface Stats {
   total: number;
   registered: number;
