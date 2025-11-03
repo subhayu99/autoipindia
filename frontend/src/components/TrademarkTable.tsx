@@ -10,7 +10,7 @@ import {
   type SortingState,
   type ColumnFiltersState,
 } from '@tanstack/react-table';
-import { RefreshCw, ChevronLeft, ChevronRight, ArrowUpDown, Clock, Trash2, History } from 'lucide-react';
+import { RefreshCw, ChevronLeft, ChevronRight, ArrowUpDown, Clock, Trash2 } from 'lucide-react';
 import type { Trademark } from '../types';
 import { formatRelativeTime } from '../utils/time';
 import { HistoryModal } from './HistoryModal';
@@ -25,11 +25,10 @@ interface TrademarkTableProps {
 
 const columnHelper = createColumnHelper<Trademark>();
 
-export const TrademarkTable: React.FC<TrademarkTableProps> = ({ data, onRefresh, onDelete, isRefreshing, isDark = false }) => {
+export const TrademarkTable: React.FC<TrademarkTableProps> = ({ data, onRefresh, onDelete, isRefreshing }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const [selectedRow, setSelectedRow] = useState<Trademark | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [historyApplicationNumber, setHistoryApplicationNumber] = useState('');
 

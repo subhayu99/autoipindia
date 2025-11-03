@@ -10,7 +10,7 @@ import { useDarkMode } from '../contexts/DarkModeContext';
 
 export const Dashboard: React.FC = () => {
   const queryClient = useQueryClient();
-  const [activeJobs, setActiveJobs] = useState<string[]>([]);
+  const [_activeJobs, setActiveJobs] = useState<string[]>([]);
   const { isDark, toggleDarkMode } = useDarkMode();
 
   // Fetch trademarks
