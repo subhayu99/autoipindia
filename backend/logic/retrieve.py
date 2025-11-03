@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import pandas as pd
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from db import engine
 from config import TRADEMARKS_STATUS_FQN, TRADEMARKS_FAILED_FQN
@@ -13,6 +13,10 @@ class TrademarkWithStatus(BaseModel):
     class_name: str | None
     status: str
     timestamp: datetime
+    
+    @field_validator("status")
+    def keep_only_first_word(cls, v: str):
+        return v.split()[0]
     
     @classmethod
     def from_dict(cls, d: dict) -> 'TrademarkWithStatus':

@@ -9,7 +9,8 @@ from logic import (
     TrademarkWithStatus,
 )
 from config import API_TOKEN
-from jobs import job_manager, JobStatus
+from jobs import job_manager
+
 
 app = FastAPI()
 
