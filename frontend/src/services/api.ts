@@ -65,4 +65,16 @@ export class APIClient {
     const response = await api.get<Job[]>('/jobs/status/running');
     return response.data;
   }
+
+  // Delete trademark
+  static async deleteByApplicationNumber(applicationNumber: string): Promise<Record<string, boolean>> {
+    const response = await api.delete<Record<string, boolean>>(`/delete/tm/${applicationNumber}`);
+    return response.data;
+  }
+
+  // Get trademark history
+  static async getHistoryByApplicationNumber(applicationNumber: string): Promise<Trademark[]> {
+    const response = await api.get<Trademark[]>(`/history/tm/${applicationNumber}`);
+    return response.data;
+  }
 }

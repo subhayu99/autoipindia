@@ -25,10 +25,10 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ trademarks }) => {
   ];
 
   const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600 border-blue-200',
-    green: 'bg-green-50 text-green-600 border-green-200',
-    yellow: 'bg-yellow-50 text-yellow-600 border-yellow-200',
-    purple: 'bg-purple-50 text-purple-600 border-purple-200',
+    blue: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-700',
+    green: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-700',
+    yellow: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 border-yellow-200 dark:border-yellow-700',
+    purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-700',
   };
 
   return (
@@ -38,7 +38,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ trademarks }) => {
         return (
           <div
             key={stat.label}
-            className={`p-6 rounded-lg border-2 ${colorClasses[stat.color as keyof typeof colorClasses]}`}
+            className={`p-6 rounded-lg border-2 transition-colors ${colorClasses[stat.color as keyof typeof colorClasses]}`}
           >
             <div className="flex items-center justify-between">
               <div>
