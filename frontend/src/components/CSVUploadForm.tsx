@@ -3,14 +3,11 @@ import {
   useReactTable,
   getCoreRowModel,
   flexRender,
-  createColumnHelper,
   ColumnDef,
 } from '@tanstack/react-table';
 import { Upload, FileUp, AlertCircle, CheckCircle, X, Trash2 } from 'lucide-react';
 import { CSVRow } from '../types';
 import { APIClient } from '../services/api';
-
-const columnHelper = createColumnHelper<CSVRow>();
 
 const CSVUploadForm: React.FC = () => {
   const [csvData, setCsvData] = useState<CSVRow[]>([]);
